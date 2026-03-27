@@ -1,0 +1,5 @@
+textual>=0.40.0
+pygame>=2.5.0
+mutagen>=1.47.0
+pydantic>=2.0.0
+pytest>=7.0.0
