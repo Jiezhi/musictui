@@ -1,0 +1,16 @@
+{
+  "library_paths": [],
+  "webdav": {
+    "enabled": false,
+    "url": "",
+    "username": "",
+    "password": ""
+  },
+  "player": {
+    "volume": 0.7,
+    "play_mode": "loop"
+  },
+  "ui": {
+    "theme": "monokai"
+  }
+}
