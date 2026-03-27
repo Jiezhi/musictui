@@ -1,4 +1,3 @@
-from textual.app import Compose
 from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Static
@@ -13,7 +12,7 @@ class MainScreen(Screen):
         super().__init__(**kwargs)
         self.app_ref = app_ref
 
-    def compose(self) -> Compose:
+    def compose(self):
         yield Container(
             Horizontal(
                 Vertical(

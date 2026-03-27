@@ -1,3 +1,4 @@
+from typing import Optional
 from textual.widget import Widget
 from src.models import Track
 
@@ -33,7 +34,7 @@ class TrackList(Widget):
             self.selected_index = (self.selected_index + 1) % len(self.tracks)
             self.refresh()
 
-    def get_selected_track(self) -> Track:
+    def get_selected_track(self) -> Optional[Track]:
         if 0 <= self.selected_index < len(self.tracks):
             return self.tracks[self.selected_index]
         return None
