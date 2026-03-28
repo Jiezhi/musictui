@@ -69,9 +69,12 @@ class MusicTUI(App):
             player_bar.update_track("No track", "", 0.0, 0.0)
 
     def on_mount(self) -> None:
-        self.install_screen(MainScreen(self), "main")
+        self.install_screen(MainScreen(), "main")
         self.push_screen("main")
-        self.call_later(self._load_library)
+
+    def on_screen_layout_updated(self, screen) -> None:
+        if isinstance(screen, MainScreen):
+            self._load_library()
 
     def _load_library(self):
         tracks = self.library.get_all_tracks()
@@ -115,14 +118,22 @@ class MusicTUI(App):
         elif event.key == "q":
             self.action_quit()
         elif event.key == "j":
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.move_down()
+            try:
+                track_list = self.query_one("#track-list", TrackList)
+                track_list.move_down()
+            except Exception:
+                pass
         elif event.key == "k":
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.move_up()
+            try:
+                track_list = self.query_one("#track-list", TrackList)
+                track_list.move_up()
+            except Exception:
+                pass
         elif event.key == "enter":
-            track_list = self.query_one("#track-list", TrackList)
-            track = track_list.get_selected_track()
-            if track:
-                self.player.play(track)
-        super().on_key(event)
+            try:
+                track_list = self.query_one("#track-list", TrackList)
+                track = track_list.get_selected_track()
+                if track:
+                    self.player.play(track)
+            except Exception:
+                pass

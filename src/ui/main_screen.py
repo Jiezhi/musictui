@@ -8,10 +8,6 @@ from src.ui.status_bar import StatusBar
 
 
 class MainScreen(Screen):
-    def __init__(self, app_ref, **kwargs):
-        super().__init__(**kwargs)
-        self.app_ref = app_ref
-
     def compose(self):
         yield Container(
             Horizontal(
@@ -29,6 +25,3 @@ class MainScreen(Screen):
             StatusBar(id="status-bar"),
             id="main-container",
         )
-
-    def on_mount(self) -> None:
-        self.app = self.app_ref
