@@ -62,14 +62,16 @@ class MusicTUI(App):
         player_bar = self.query_one("#player-bar", PlayerBar)
         current = self.player.get_current_track()
         if current:
-            player_bar.update_track(current.title, current.artist, 0.0, current.duration)
+            player_bar.update_track(
+                current.title, current.artist, 0.0, current.duration
+            )
         else:
             player_bar.update_track("No track", "", 0.0, 0.0)
 
     def on_mount(self) -> None:
         self.install_screen(MainScreen(self), "main")
         self.push_screen("main")
-        self._load_library()
+        self.call_later(self._load_library)
 
     def _load_library(self):
         tracks = self.library.get_all_tracks()
