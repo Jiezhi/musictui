@@ -1,9 +1,9 @@
 from typing import Optional
-from textual.widget import Widget
+from textual.widgets import Static
 from src.models import Track
 
 
-class TrackList(Widget):
+class TrackList(Static):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.tracks: list[Track] = []
@@ -22,17 +22,17 @@ class TrackList(Widget):
     def set_tracks(self, tracks: list[Track]) -> None:
         self.tracks = tracks
         self.selected_index = 0
-        self.refresh()
+        self.update(self.render())
 
     def move_up(self) -> None:
         if self.tracks:
             self.selected_index = (self.selected_index - 1) % len(self.tracks)
-            self.refresh()
+            self.update(self.render())
 
     def move_down(self) -> None:
         if self.tracks:
             self.selected_index = (self.selected_index + 1) % len(self.tracks)
-            self.refresh()
+            self.update(self.render())
 
     def get_selected_track(self) -> Optional[Track]:
         if 0 <= self.selected_index < len(self.tracks):

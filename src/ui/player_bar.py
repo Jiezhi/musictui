@@ -1,8 +1,7 @@
-from textual.widget import Widget
 from textual.widgets import Static
 
 
-class PlayerBar(Widget):
+class PlayerBar(Static):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.track_title = ""
@@ -20,9 +19,11 @@ class PlayerBar(Widget):
         secs = int(seconds % 60)
         return f"{mins:02d}:{secs:02d}"
 
-    def update_track(self, title: str, artist: str, current: float, total: float) -> None:
+    def update_track(
+        self, title: str, artist: str, current: float, total: float
+    ) -> None:
         self.track_title = title
         self.track_artist = artist
         self.current_time = current
         self.total_time = total
-        self.refresh()
+        self.update(self.render())

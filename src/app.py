@@ -1,6 +1,7 @@
 import os
 from textual.app import App
 from textual import work
+from textual.binding import Binding
 from src.config import get_config
 from src.player import Player
 from src.library import Library
@@ -39,6 +40,16 @@ class MusicTUI(App):
         color: $text;
     }
     """
+
+    BINDINGS = [
+        Binding("space", "play_pause", "Play/Pause", show=False),
+        Binding("n", "next", "Next", show=False),
+        Binding("p", "previous", "Prev", show=False),
+        Binding("j", "move_down", "Down", show=False),
+        Binding("k", "move_up", "Up", show=False),
+        Binding("enter", "play_selected", "Play", show=False),
+        Binding("q", "quit", "Quit", show=False),
+    ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -102,38 +113,30 @@ class MusicTUI(App):
         self.player.stop()
         self.exit()
 
+    def action_move_down(self) -> None:
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track_list.move_down()
+        except Exception:
+            pass
+
+    def action_move_up(self) -> None:
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track_list.move_up()
+        except Exception:
+            pass
+
+    def action_play_selected(self) -> None:
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track = track_list.get_selected_track()
+            if track:
+                self.player.play(track)
+        except Exception:
+            pass
+
     def action_scan(self, path: str) -> None:
         tracks = self.library.scan_local(path)
         track_list = self.query_one("#track-list", TrackList)
         track_list.set_tracks(self.library.get_all_tracks())
-
-    def on_key(self, event) -> None:
-        if event.key == "space":
-            self.action_play_pause()
-            event.prevent_default()
-        elif event.key == "n":
-            self.action_next()
-        elif event.key == "p":
-            self.action_previous()
-        elif event.key == "q":
-            self.action_quit()
-        elif event.key == "j":
-            try:
-                track_list = self.query_one("#track-list", TrackList)
-                track_list.move_down()
-            except Exception:
-                pass
-        elif event.key == "k":
-            try:
-                track_list = self.query_one("#track-list", TrackList)
-                track_list.move_up()
-            except Exception:
-                pass
-        elif event.key == "enter":
-            try:
-                track_list = self.query_one("#track-list", TrackList)
-                track = track_list.get_selected_track()
-                if track:
-                    self.player.play(track)
-            except Exception:
-                pass

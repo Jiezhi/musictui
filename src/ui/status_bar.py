@@ -1,7 +1,7 @@
-from textual.widget import Widget
+from textual.widgets import Static
 
 
-class StatusBar(Widget):
+class StatusBar(Static):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
