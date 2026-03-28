@@ -10,7 +10,9 @@ from src.ui.player_bar import PlayerBar
 from src.ui.track_list import TrackList
 from src.ui.sidebar import Sidebar
 from src.ui.settings import Settings
+from src.ui.search import Search
 from src.ui.status_bar import StatusBar
+from src.ui.queue import Queue
 from src.models import PlayerState, PlayMode
 
 
@@ -41,6 +43,9 @@ class MusicTUI(App):
         dock: bottom;
         background: $accent;
     }
+    #queue {
+        width: 1fr;
+    }
     """
 
     BINDINGS = [
@@ -64,6 +69,8 @@ class MusicTUI(App):
             yield Sidebar(id="sidebar")
             yield TrackList(id="track-list")
             yield Settings(id="settings")
+            yield Search(id="search")
+            yield Queue(id="queue")
             yield PlayerBar(id="player-bar")
             yield StatusBar(id="status-bar")
 
@@ -112,6 +119,12 @@ class MusicTUI(App):
 
         settings = self.query_one("#settings", Settings)
         settings.styles.display = "none"
+
+        search = self.query_one("#search", Search)
+        search.styles.display = "none"
+
+        queue = self.query_one("#queue", Queue)
+        queue.styles.display = "none"
 
         self.total_tracks = self.library.get_total_count()
         if self.total_tracks == 0:
@@ -173,24 +186,44 @@ class MusicTUI(App):
 
     def action_move_down(self) -> None:
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.move_down()
+            if self.current_view == "search":
+                search = self.query_one("#search", Search)
+                search.move_down()
+            elif self.current_view == "queue":
+                queue = self.query_one("#queue", Queue)
+                queue.move_down()
+            else:
+                track_list = self.query_one("#track-list", TrackList)
+                track_list.move_down()
         except Exception:
             pass
 
     def action_move_up(self) -> None:
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.move_up()
+            if self.current_view == "search":
+                search = self.query_one("#search", Search)
+                search.move_up()
+            elif self.current_view == "queue":
+                queue = self.query_one("#queue", Queue)
+                queue.move_up()
+            else:
+                track_list = self.query_one("#track-list", TrackList)
+                track_list.move_up()
         except Exception:
             pass
 
     def action_play_selected(self) -> None:
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track = track_list.get_selected_track()
-            if track:
-                self.player.play(track)
+            if self.current_view == "search":
+                search = self.query_one("#search", Search)
+                track = search.get_selected_track()
+                if track:
+                    self.player.play(track)
+            else:
+                track_list = self.query_one("#track-list", TrackList)
+                track = track_list.get_selected_track()
+                if track:
+                    self.player.play(track)
         except Exception:
             pass
 
@@ -215,10 +248,37 @@ class MusicTUI(App):
             pass
 
     def action_show_queue(self) -> None:
-        pass
+        self.current_view = "queue"
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track_list.styles.display = "none"
+            settings = self.query_one("#settings", Settings)
+            settings.styles.display = "none"
+            search = self.query_one("#search", Search)
+            search.styles.display = "none"
+            queue = self.query_one("#queue", Queue)
+            queue.set_tracks(self.player.queue)
+            queue.styles.display = "block"
+            sidebar = self.query_one("#sidebar", Sidebar)
+            sidebar.selected = 1
+            sidebar._update_content()
+        except Exception:
+            pass
 
     def action_show_search(self) -> None:
-        pass
+        self.current_view = "search"
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track_list.styles.display = "none"
+            settings = self.query_one("#settings", Settings)
+            settings.styles.display = "none"
+            search = self.query_one("#search", Search)
+            search.styles.display = "block"
+            sidebar = self.query_one("#sidebar", Sidebar)
+            sidebar.selected = 2
+            sidebar._update_content()
+        except Exception:
+            pass
 
     def action_show_settings(self) -> None:
         self.current_view = "settings"
