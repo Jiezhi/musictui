@@ -112,3 +112,39 @@ def test_library_get_all_tracks_with_pagination(tmp_path):
 
     all_tracks = library.get_all_tracks()
     assert len(all_tracks) == 100
+
+
+def test_library_search_by_pinyin(tmp_path):
+    db_path = tmp_path / "test.db"
+    library = Library(str(db_path))
+
+    track1 = Track(file_path="/test/song1.mp3", title="北京欢迎你", artist="群星")
+    track2 = Track(file_path="/test/song2.mp3", title="春天里", artist="汪峰")
+    library._save_track(track1)
+    library._save_track(track2)
+
+    results = library.search("bei")
+    assert len(results) == 1
+    assert "北京" in results[0].title
+
+    results = library.search("bj")
+    assert len(results) == 1
+    assert "北京" in results[0].title
+
+
+def test_library_search_by_initials(tmp_path):
+    db_path = tmp_path / "test.db"
+    library = Library(str(db_path))
+
+    track1 = Track(file_path="/test/song1.mp3", title="歌唱祖国", artist="合唱")
+    track2 = Track(file_path="/test/song2.mp3", title="我的祖国", artist="合唱")
+    library._save_track(track1)
+    library._save_track(track2)
+
+    results = library.search("gc")
+    assert len(results) == 1
+    assert "歌唱" in results[0].title
+
+    results = library.search("wd")
+    assert len(results) == 1
+    assert "我的" in results[0].title

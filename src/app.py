@@ -66,6 +66,52 @@ class MusicTUI(App):
         Binding("=", "volume_up", "Vol+", show=False),
         Binding("-", "volume_down", "Vol-", show=False),
         Binding("_", "volume_down", "Vol-", show=False),
+        Binding("backspace", "search_backspace", "Backspace", show=False),
+        Binding("escape", "clear_search", "Clear", show=False),
+    ]
+
+    SEARCH_KEYS = [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "u",
+        "v",
+        "w",
+        "x",
+        "y",
+        "z",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "-",
+        "_",
+        " ",
+        ".",
+        "@",
     ]
 
     def compose(self):
@@ -126,6 +172,7 @@ class MusicTUI(App):
 
         search = self.query_one("#search", Search)
         search.styles.display = "none"
+        search.set_library(self.library)
 
         queue = self.query_one("#queue", Queue)
         queue.styles.display = "none"
@@ -293,6 +340,42 @@ class MusicTUI(App):
         self.tracks = self.library.get_all_tracks(limit=50)
         track_list = self.query_one("#track-list", TrackList)
         track_list.set_tracks(self.tracks, self.total_tracks)
+
+    def _add_search_key_bindings(self) -> None:
+        for key in self.SEARCH_KEYS:
+            self.BINDINGS.append(Binding(key, f"search_input_{key}", "", show=False))
+
+    def __getattr__(self, name: str):
+        if name.startswith("action_search_input_"):
+            key = name.replace("action_search_input_", "")
+            return lambda: self._handle_search_input(key)
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
+
+    def _handle_search_input(self, char: str) -> None:
+        if self.current_view == "search":
+            try:
+                search = self.query_one("#search", Search)
+                search.append_char(char)
+            except Exception:
+                pass
+
+    def action_search_backspace(self) -> None:
+        if self.current_view == "search":
+            try:
+                search = self.query_one("#search", Search)
+                search.backspace()
+            except Exception:
+                pass
+
+    def action_clear_search(self) -> None:
+        if self.current_view == "search":
+            try:
+                search = self.query_one("#search", Search)
+                search.clear()
+            except Exception:
+                pass
 
     def action_show_library(self) -> None:
         self.current_view = "library"
