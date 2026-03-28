@@ -1,0 +1,122 @@
+import pytest
+from src.ui.track_list import TrackList
+from src.models import Track
+
+
+class TestTrackList:
+    def test_initial_state(self):
+        track_list = TrackList()
+        assert track_list.tracks == []
+        assert track_list.selected_index == 0
+        assert track_list.total_count == 0
+
+    def test_set_tracks_empty(self):
+        track_list = TrackList()
+        track_list.set_tracks([], 0)
+        assert track_list.tracks == []
+        assert track_list.selected_index == 0
+
+    def test_set_tracks_with_data(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=1, title="Song 1", file_path="/a.mp3"),
+            Track(id=2, title="Song 2", file_path="/b.mp3"),
+        ]
+        track_list.set_tracks(tracks, 2)
+        assert len(track_list.tracks) == 2
+        assert track_list.selected_index == 0
+
+    def test_get_selected_track_empty(self):
+        track_list = TrackList()
+        assert track_list.get_selected_track() is None
+
+    def test_get_selected_track_with_data(self):
+        track_list = TrackList()
+        tracks = [Track(id=1, title="Song 1", file_path="/a.mp3")]
+        track_list.set_tracks(tracks, 1)
+        assert track_list.get_selected_track() is not None
+        assert track_list.get_selected_track().title == "Song 1"
+
+    def test_move_up(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=1, title="Song 1", file_path="/a.mp3"),
+            Track(id=2, title="Song 2", file_path="/b.mp3"),
+        ]
+        track_list.set_tracks(tracks, 2)
+        track_list.selected_index = 1
+        track_list.move_up()
+        assert track_list.selected_index == 0
+
+    def test_move_down(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=1, title="Song 1", file_path="/a.mp3"),
+            Track(id=2, title="Song 2", file_path="/b.mp3"),
+        ]
+        track_list.set_tracks(tracks, 2)
+        track_list.move_down()
+        assert track_list.selected_index == 1
+
+    def test_move_down_wraps_around(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=1, title="Song 1", file_path="/a.mp3"),
+            Track(id=2, title="Song 2", file_path="/b.mp3"),
+        ]
+        track_list.set_tracks(tracks, 2)
+        track_list.selected_index = 1
+        track_list.move_down()
+        assert track_list.selected_index == 0
+
+    def test_append_tracks(self):
+        track_list = TrackList()
+        tracks1 = [Track(id=1, title="Song 1", file_path="/a.mp3")]
+        track_list.set_tracks(tracks1, 1)
+
+        tracks2 = [Track(id=2, title="Song 2", file_path="/b.mp3")]
+        track_list.append_tracks(tracks2)
+
+        assert len(track_list.tracks) == 2
+
+    def test_set_load_more_callback(self):
+        track_list = TrackList()
+        called = []
+
+        def callback():
+            called.append(1)
+
+        track_list.set_load_more_callback(callback)
+        assert track_list._load_more_callback is not None
+
+    def test_load_more_callback_triggered(self):
+        track_list = TrackList()
+        called = False
+
+        def callback():
+            nonlocal called
+            called = True
+
+        tracks = [
+            Track(id=i, title=f"Song {i}", file_path=f"/{i}.mp3") for i in range(10)
+        ]
+        track_list.set_tracks(tracks, 20)
+        track_list.set_load_more_callback(callback)
+
+        track_list.load_more()
+        assert called == True
+
+    def test_load_more_not_triggered_when_all_loaded(self):
+        track_list = TrackList()
+        called = False
+
+        def callback():
+            nonlocal called
+            called = True
+
+        tracks = [Track(id=1, title="Song 1", file_path="/a.mp3")]
+        track_list.set_tracks(tracks, 1)
+        track_list.set_load_more_callback(callback)
+
+        track_list.load_more()
+        assert called == False

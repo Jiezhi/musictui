@@ -61,17 +61,32 @@ class MusicTUI(App):
 
     def _on_track_change(self, track):
         self.call_later(self._update_player_bar)
+        if not hasattr(self, "_position_timer"):
+            self._position_timer = self.set_interval(
+                0.5, self._update_playback_position
+            )
 
     def _on_state_change(self, state):
         self.call_later(self._update_player_bar)
+        if state == PlayerState.STOPPED:
+            if hasattr(self, "_position_timer"):
+                self._position_timer.stop()
 
-    def _update_player_bar(self):
+    def _update_playback_position(self):
+        if self.player.state == PlayerState.PLAYING and self.player._current_sound:
+            try:
+                current_pos = self.player._current_sound.get_pos() / 1000.0
+                self._update_player_bar(current_pos)
+            except Exception:
+                pass
+
+    def _update_player_bar(self, current_time: float = 0.0):
         try:
             player_bar = self.query_one("#player-bar", PlayerBar)
             current = self.player.get_current_track()
             if current:
                 player_bar.update_track(
-                    current.title, current.artist, 0.0, current.duration
+                    current.title, current.artist, current_time, current.duration
                 )
             else:
                 player_bar.update_track("No track", "", 0.0, 0.0)
@@ -86,11 +101,14 @@ class MusicTUI(App):
         self.player = Player()
         self.library = Library(os.path.expanduser("~/.musictui/music.db"))
 
-        for path in self.config.library_paths:
-            if os.path.exists(path):
-                self.library.scan_local(path)
+        self.total_tracks = self.library.get_total_count()
+        if self.total_tracks == 0:
+            for path in self.config.library_paths:
+                if os.path.exists(path):
+                    self.library.scan_local(path)
+            self.total_tracks = self.library.get_total_count()
 
-        self.tracks = self.library.get_all_tracks()
+        self.tracks = self.library.get_all_tracks(limit=50)
 
         self.player.set_volume(self.config.player.volume)
         if self.config.player.play_mode == "shuffle":
@@ -104,10 +122,21 @@ class MusicTUI(App):
     def _load_library(self):
         try:
             track_list = self.query_one("#track-list", TrackList)
-            track_list.set_tracks(self.tracks)
+            track_list.set_tracks(self.tracks, self.total_tracks)
+            track_list.set_load_more_callback(self._load_more_tracks)
         except Exception as e:
             print(f"Error: {e}")
             self.set_timer(0.1, self._load_library)
+
+    def _load_more_tracks(self):
+        new_tracks = self.library.get_all_tracks(offset=len(self.tracks), limit=50)
+        if new_tracks:
+            self.tracks.extend(new_tracks)
+            try:
+                track_list = self.query_one("#track-list", TrackList)
+                track_list.append_tracks(new_tracks)
+            except Exception:
+                pass
 
     def action_play_pause(self) -> None:
         if self.player.state == PlayerState.PLAYING:
@@ -155,5 +184,7 @@ class MusicTUI(App):
 
     def action_scan(self, path: str) -> None:
         tracks = self.library.scan_local(path)
+        self.total_tracks = self.library.get_total_count()
+        self.tracks = self.library.get_all_tracks(limit=50)
         track_list = self.query_one("#track-list", TrackList)
-        track_list.set_tracks(self.library.get_all_tracks())
+        track_list.set_tracks(self.tracks, self.total_tracks)

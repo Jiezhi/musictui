@@ -34,10 +34,10 @@ class Library:
         return conn
 
     def scan_local(self, path: str) -> list[Track]:
-        music_extensions = {'.mp3', '.flac', '.wav', '.ogg', '.m4a', '.wma'}
+        music_extensions = {".mp3", ".flac", ".wav", ".ogg", ".m4a", ".wma"}
         tracks = []
 
-        for file_path in Path(path).rglob('*'):
+        for file_path in Path(path).rglob("*"):
             if file_path.suffix.lower() in music_extensions:
                 track = self._extract_metadata(file_path)
                 self._save_track(track)
@@ -54,13 +54,17 @@ class Library:
             tags = audio.tags or {}
             return Track(
                 file_path=str(file_path),
-                title=tags.get('title', [file_path.stem])[0] if tags else file_path.stem,
-                artist=tags.get('artist', [''])[0] if tags else '',
-                album=tags.get('album', [''])[0] if tags else '',
+                title=tags.get("title", [file_path.stem])[0]
+                if tags
+                else file_path.stem,
+                artist=tags.get("artist", [""])[0] if tags else "",
+                album=tags.get("album", [""])[0] if tags else "",
                 duration=float(audio.info.length) if audio.info else 0.0,
-                genre=tags.get('genre', [''])[0] if tags else '',
-                year=int(tags.get('date', ['0'])[0][:4]) if tags and tags.get('date') else None,
-                track_number=int(tags.get('tracknumber', [0])[0]) if tags else None,
+                genre=tags.get("genre", [""])[0] if tags else "",
+                year=int(tags.get("date", ["0"])[0][:4])
+                if tags and tags.get("date")
+                else None,
+                track_number=int(tags.get("tracknumber", [0])[0]) if tags else None,
             )
         except Exception:
             return Track(file_path=str(file_path), title=file_path.stem)
@@ -71,26 +75,51 @@ class Library:
             """INSERT OR REPLACE INTO tracks 
                (file_path, title, artist, album, duration, genre, year, track_number)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (track.file_path, track.title, track.artist, track.album,
-             track.duration, track.genre, track.year, track.track_number)
+            (
+                track.file_path,
+                track.title,
+                track.artist,
+                track.album,
+                track.duration,
+                track.genre,
+                track.year,
+                track.track_number,
+            ),
         )
         track.id = cursor.lastrowid
         conn.commit()
         conn.close()
 
-    def get_all_tracks(self) -> list[Track]:
+    def get_all_tracks(self, offset: int = 0, limit: int = 100000) -> list[Track]:
         conn = self._get_connection()
         cursor = conn.execute(
-            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number FROM tracks"
+            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number FROM tracks LIMIT ? OFFSET ?",
+            (limit, offset),
         )
         tracks = []
         for row in cursor.fetchall():
-            tracks.append(Track(
-                id=row[0], file_path=row[1], title=row[2], artist=row[3],
-                album=row[4], duration=row[5], genre=row[6], year=row[7], track_number=row[8]
-            ))
+            tracks.append(
+                Track(
+                    id=row[0],
+                    file_path=row[1],
+                    title=row[2],
+                    artist=row[3],
+                    album=row[4],
+                    duration=row[5],
+                    genre=row[6],
+                    year=row[7],
+                    track_number=row[8],
+                )
+            )
         conn.close()
         return tracks
+
+    def get_total_count(self) -> int:
+        conn = self._get_connection()
+        cursor = conn.execute("SELECT COUNT(*) FROM tracks")
+        count = cursor.fetchone()[0]
+        conn.close()
+        return count
 
     def search(self, query: str) -> list[Track]:
         conn = self._get_connection()
@@ -99,14 +128,23 @@ class Library:
             """SELECT id, file_path, title, artist, album, duration, genre, year, track_number 
                FROM tracks 
                WHERE title LIKE ? OR artist LIKE ? OR album LIKE ?""",
-            (pattern, pattern, pattern)
+            (pattern, pattern, pattern),
         )
         tracks = []
         for row in cursor.fetchall():
-            tracks.append(Track(
-                id=row[0], file_path=row[1], title=row[2], artist=row[3],
-                album=row[4], duration=row[5], genre=row[6], year=row[7], track_number=row[8]
-            ))
+            tracks.append(
+                Track(
+                    id=row[0],
+                    file_path=row[1],
+                    title=row[2],
+                    artist=row[3],
+                    album=row[4],
+                    duration=row[5],
+                    genre=row[6],
+                    year=row[7],
+                    track_number=row[8],
+                )
+            )
         conn.close()
         return tracks
 
@@ -114,13 +152,20 @@ class Library:
         conn = self._get_connection()
         cursor = conn.execute(
             "SELECT id, file_path, title, artist, album, duration, genre, year, track_number FROM tracks WHERE id = ?",
-            (track_id,)
+            (track_id,),
         )
         row = cursor.fetchone()
         conn.close()
         if row:
             return Track(
-                id=row[0], file_path=row[1], title=row[2], artist=row[3],
-                album=row[4], duration=row[5], genre=row[6], year=row[7], track_number=row[8]
+                id=row[0],
+                file_path=row[1],
+                title=row[2],
+                artist=row[3],
+                album=row[4],
+                duration=row[5],
+                genre=row[6],
+                year=row[7],
+                track_number=row[8],
             )
         return None
