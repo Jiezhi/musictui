@@ -2,12 +2,14 @@ import os
 from textual.app import App
 from textual import work
 from textual.binding import Binding
+from textual.containers import Container, Horizontal, Vertical
 from src.config import get_config
 from src.player import Player
 from src.library import Library
-from src.ui.main_screen import MainScreen
 from src.ui.player_bar import PlayerBar
 from src.ui.track_list import TrackList
+from src.ui.sidebar import Sidebar
+from src.ui.status_bar import StatusBar
 from src.models import PlayerState, PlayMode
 
 
@@ -17,27 +19,26 @@ class MusicTUI(App):
         background: $surface;
     }
     #main-container {
+        width: 100%;
         height: 100%;
     }
-    #main-area {
-        height: 100%;
-    }
-    #sidebar-container {
+    #sidebar {
         width: 20;
+        dock: left;
         border: solid $primary;
     }
-    #main-content {
-        width: 80;
+    #track-list {
+        width: 1fr;
     }
     #player-bar {
         height: 3;
+        dock: bottom;
         border-top: solid $primary;
-        background: $surface-darken-1;
     }
     #status-bar {
         height: 1;
+        dock: bottom;
         background: $accent;
-        color: $text;
     }
     """
 
@@ -51,17 +52,12 @@ class MusicTUI(App):
         Binding("q", "quit", "Quit", show=False),
     ]
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.config = get_config()
-        self.player = Player()
-        self.library = Library(os.path.expanduser("~/.musictui/music.db"))
-        self.player.set_volume(self.config.player.volume)
-        if self.config.player.play_mode == "shuffle":
-            self.player.set_play_mode(PlayMode.SHUFFLE)
-
-        self.player.set_on_track_change(self._on_track_change)
-        self.player.set_on_state_change(self._on_state_change)
+    def compose(self):
+        with Container(id="main-container"):
+            yield Sidebar(id="sidebar")
+            yield TrackList(id="track-list")
+            yield PlayerBar(id="player-bar")
+            yield StatusBar(id="status-bar")
 
     def _on_track_change(self, track):
         self.call_later(self._update_player_bar)
@@ -70,27 +66,48 @@ class MusicTUI(App):
         self.call_later(self._update_player_bar)
 
     def _update_player_bar(self):
-        player_bar = self.query_one("#player-bar", PlayerBar)
-        current = self.player.get_current_track()
-        if current:
-            player_bar.update_track(
-                current.title, current.artist, 0.0, current.duration
-            )
-        else:
-            player_bar.update_track("No track", "", 0.0, 0.0)
+        try:
+            player_bar = self.query_one("#player-bar", PlayerBar)
+            current = self.player.get_current_track()
+            if current:
+                player_bar.update_track(
+                    current.title, current.artist, 0.0, current.duration
+                )
+            else:
+                player_bar.update_track("No track", "", 0.0, 0.0)
+        except Exception:
+            pass
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def on_mount(self) -> None:
-        self.install_screen(MainScreen(), "main")
-        self.push_screen("main")
+        self.config = get_config()
+        self.player = Player()
+        self.library = Library(os.path.expanduser("~/.musictui/music.db"))
 
-    def on_screen_layout_updated(self, screen) -> None:
-        if isinstance(screen, MainScreen):
-            self._load_library()
+        for path in self.config.library_paths:
+            if os.path.exists(path):
+                self.library.scan_local(path)
+
+        self.tracks = self.library.get_all_tracks()
+
+        self.player.set_volume(self.config.player.volume)
+        if self.config.player.play_mode == "shuffle":
+            self.player.set_play_mode(PlayMode.SHUFFLE)
+
+        self.player.set_on_track_change(self._on_track_change)
+        self.player.set_on_state_change(self._on_state_change)
+
+        self._load_library()
 
     def _load_library(self):
-        tracks = self.library.get_all_tracks()
-        track_list = self.query_one("#track-list", TrackList)
-        track_list.set_tracks(tracks)
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track_list.set_tracks(self.tracks)
+        except Exception as e:
+            print(f"Error: {e}")
+            self.set_timer(0.1, self._load_library)
 
     def action_play_pause(self) -> None:
         if self.player.state == PlayerState.PLAYING:
