@@ -9,6 +9,7 @@ from src.library import Library
 from src.ui.player_bar import PlayerBar
 from src.ui.track_list import TrackList
 from src.ui.sidebar import Sidebar
+from src.ui.settings import Settings
 from src.ui.status_bar import StatusBar
 from src.models import PlayerState, PlayMode
 
@@ -50,12 +51,19 @@ class MusicTUI(App):
         Binding("k", "move_up", "Up", show=False),
         Binding("enter", "play_selected", "Play", show=False),
         Binding("q", "quit", "Quit", show=False),
+        Binding("1", "show_library", "Library", show=False),
+        Binding("2", "show_queue", "Queue", show=False),
+        Binding("3", "show_search", "Search", show=False),
+        Binding("4", "show_settings", "Settings", show=False),
+        Binding("l", "sidebar_up", "Sidebar Up", show=False),
+        Binding("h", "sidebar_down", "Sidebar Down", show=False),
     ]
 
     def compose(self):
         with Container(id="main-container"):
             yield Sidebar(id="sidebar")
             yield TrackList(id="track-list")
+            yield Settings(id="settings")
             yield PlayerBar(id="player-bar")
             yield StatusBar(id="status-bar")
 
@@ -95,11 +103,15 @@ class MusicTUI(App):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.current_view = "library"
 
     def on_mount(self) -> None:
         self.config = get_config()
         self.player = Player()
         self.library = Library(os.path.expanduser("~/.musictui/music.db"))
+
+        settings = self.query_one("#settings", Settings)
+        settings.styles.display = "none"
 
         self.total_tracks = self.library.get_total_count()
         if self.total_tracks == 0:
@@ -188,3 +200,66 @@ class MusicTUI(App):
         self.tracks = self.library.get_all_tracks(limit=50)
         track_list = self.query_one("#track-list", TrackList)
         track_list.set_tracks(self.tracks, self.total_tracks)
+
+    def action_show_library(self) -> None:
+        self.current_view = "library"
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track_list.styles.display = "block"
+            settings = self.query_one("#settings", Settings)
+            settings.styles.display = "none"
+            sidebar = self.query_one("#sidebar", Sidebar)
+            sidebar.selected = 0
+            sidebar._update_content()
+        except Exception:
+            pass
+
+    def action_show_queue(self) -> None:
+        pass
+
+    def action_show_search(self) -> None:
+        pass
+
+    def action_show_settings(self) -> None:
+        self.current_view = "settings"
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track_list.styles.display = "none"
+            settings = self.query_one("#settings", Settings)
+            settings.styles.display = "block"
+            sidebar = self.query_one("#sidebar", Sidebar)
+            sidebar.selected = 3
+            sidebar._update_content()
+        except Exception:
+            pass
+
+    def action_sidebar_up(self) -> None:
+        try:
+            sidebar = self.query_one("#sidebar", Sidebar)
+            sidebar.move_up()
+            self._on_sidebar_change()
+        except Exception:
+            pass
+
+    def action_sidebar_down(self) -> None:
+        try:
+            sidebar = self.query_one("#sidebar", Sidebar)
+            sidebar.move_down()
+            self._on_sidebar_change()
+        except Exception:
+            pass
+
+    def _on_sidebar_change(self) -> None:
+        try:
+            sidebar = self.query_one("#sidebar", Sidebar)
+            selected = sidebar.get_selected()
+            if selected == "Library":
+                self.action_show_library()
+            elif selected == "Queue":
+                self.action_show_queue()
+            elif selected == "Search":
+                self.action_show_search()
+            elif selected == "Settings":
+                self.action_show_settings()
+        except Exception:
+            pass
