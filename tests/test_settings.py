@@ -75,3 +75,66 @@ def test_settings_cycle_theme():
     settings.cycle_theme()
     new_theme = settings.values["Theme"]
     assert new_theme in ["monokai", "nord", "dracula"]
+
+
+def test_settings_displays_values():
+    settings = Settings()
+    settings._update_content()
+    content = settings.get_display_text()
+    assert "Volume" in content
+    assert "70%" in content
+    assert "Play Mode" in content
+    assert "loop" in content
+
+
+def test_settings_increase_volume():
+    settings = Settings()
+    settings.selected = 0
+    initial_volume = settings.values["Volume"]
+    settings.adjust_volume(0.1)
+    assert settings.values["Volume"] == initial_volume + 0.1
+
+
+def test_settings_decrease_volume():
+    settings = Settings()
+    settings.selected = 0
+    settings.values["Volume"] = 0.5
+    settings.adjust_volume(-0.1)
+    assert settings.values["Volume"] == 0.4
+
+
+def test_settings_volume_clamped():
+    settings = Settings()
+    settings.values["Volume"] = 0.9
+    settings.adjust_volume(0.2)
+    assert settings.values["Volume"] == 1.0
+
+
+def test_settings_volume_min_clamped():
+    settings = Settings()
+    settings.values["Volume"] = 0.1
+    settings.adjust_volume(-0.2)
+    assert settings.values["Volume"] == 0.0
+
+
+def test_settings_toggle_value():
+    settings = Settings()
+    settings.selected = 1
+    initial_mode = settings.values["Play Mode"]
+    settings.toggle_value()
+    new_mode = settings.values["Play Mode"]
+    assert new_mode != initial_mode
+
+
+def test_settings_library_paths():
+    settings = Settings()
+    settings.set_library_paths(["/music", "/downloads"])
+    assert settings.values["Library Paths"] == "/music, /downloads"
+
+
+def test_settings_get_display_text():
+    settings = Settings()
+    settings.selected = 0
+    text = settings.get_display_text()
+    assert "Volume" in text
+    assert ">" in text

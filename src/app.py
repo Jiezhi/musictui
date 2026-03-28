@@ -186,7 +186,15 @@ class MusicTUI(App):
 
     def action_move_down(self) -> None:
         try:
-            if self.current_view == "search":
+            if self.current_view == "settings":
+                settings = self.query_one("#settings", Settings)
+                selected = settings.get_selected()
+                if selected == "Volume":
+                    settings.adjust_volume(-0.1)
+                    self._apply_volume_change(settings)
+                else:
+                    settings.move_down()
+            elif self.current_view == "search":
                 search = self.query_one("#search", Search)
                 search.move_down()
             elif self.current_view == "queue":
@@ -200,7 +208,15 @@ class MusicTUI(App):
 
     def action_move_up(self) -> None:
         try:
-            if self.current_view == "search":
+            if self.current_view == "settings":
+                settings = self.query_one("#settings", Settings)
+                selected = settings.get_selected()
+                if selected == "Volume":
+                    settings.adjust_volume(0.1)
+                    self._apply_volume_change(settings)
+                else:
+                    settings.move_up()
+            elif self.current_view == "search":
                 search = self.query_one("#search", Search)
                 search.move_up()
             elif self.current_view == "queue":
@@ -212,9 +228,16 @@ class MusicTUI(App):
         except Exception:
             pass
 
+    def _apply_volume_change(self, settings) -> None:
+        volume = settings.get_value("Volume")
+        self.player.set_volume(volume)
+
     def action_play_selected(self) -> None:
         try:
-            if self.current_view == "search":
+            if self.current_view == "settings":
+                settings = self.query_one("#settings", Settings)
+                self._apply_settings_change(settings)
+            elif self.current_view == "search":
                 search = self.query_one("#search", Search)
                 track = search.get_selected_track()
                 if track:
@@ -226,6 +249,27 @@ class MusicTUI(App):
                     self.player.play(track)
         except Exception:
             pass
+
+    def _apply_settings_change(self, settings) -> None:
+        selected = settings.get_selected()
+        if selected == "Volume":
+            pass
+        elif selected == "Play Mode":
+            mode = settings.get_value("Play Mode")
+            if mode == "shuffle":
+                self.player.set_play_mode(PlayMode.SHUFFLE)
+            elif mode == "repeat_one":
+                self.player.set_play_mode(PlayMode.SINGLE)
+            else:
+                self.player.set_play_mode(PlayMode.LOOP)
+        elif selected == "Theme":
+            theme = settings.get_value("Theme")
+            if theme == "nord":
+                self.theme = "nord"
+            elif theme == "dracula":
+                self.theme = "dracula"
+            else:
+                self.theme = "monokai"
 
     def action_scan(self, path: str) -> None:
         tracks = self.library.scan_local(path)
