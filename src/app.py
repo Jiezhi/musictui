@@ -62,6 +62,8 @@ class MusicTUI(App):
         Binding("4", "show_settings", "Settings", show=False),
         Binding("l", "sidebar_up", "Sidebar Up", show=False),
         Binding("h", "sidebar_down", "Sidebar Down", show=False),
+        Binding("+", "volume_up", "Vol+", show=False),
+        Binding("-", "volume_down", "Vol-", show=False),
     ]
 
     def compose(self):
@@ -188,12 +190,7 @@ class MusicTUI(App):
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
-                selected = settings.get_selected()
-                if selected == "Volume":
-                    settings.adjust_volume(-0.1)
-                    self._apply_volume_change(settings)
-                else:
-                    settings.move_down()
+                settings.move_down()
             elif self.current_view == "search":
                 search = self.query_one("#search", Search)
                 search.move_down()
@@ -210,12 +207,7 @@ class MusicTUI(App):
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
-                selected = settings.get_selected()
-                if selected == "Volume":
-                    settings.adjust_volume(0.1)
-                    self._apply_volume_change(settings)
-                else:
-                    settings.move_up()
+                settings.move_up()
             elif self.current_view == "search":
                 search = self.query_one("#search", Search)
                 search.move_up()
@@ -270,6 +262,24 @@ class MusicTUI(App):
                 self.theme = "dracula"
             else:
                 self.theme = "monokai"
+
+    def action_volume_up(self) -> None:
+        try:
+            settings = self.query_one("#settings", Settings)
+            settings.adjust_volume(0.1)
+            volume = settings.get_value("Volume")
+            self.player.set_volume(volume)
+        except Exception:
+            pass
+
+    def action_volume_down(self) -> None:
+        try:
+            settings = self.query_one("#settings", Settings)
+            settings.adjust_volume(-0.1)
+            volume = settings.get_value("Volume")
+            self.player.set_volume(volume)
+        except Exception:
+            pass
 
     def action_scan(self, path: str) -> None:
         tracks = self.library.scan_local(path)
