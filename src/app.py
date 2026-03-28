@@ -63,7 +63,9 @@ class MusicTUI(App):
         Binding("l", "sidebar_up", "Sidebar Up", show=False),
         Binding("h", "sidebar_down", "Sidebar Down", show=False),
         Binding("+", "volume_up", "Vol+", show=False),
+        Binding("=", "volume_up", "Vol+", show=False),
         Binding("-", "volume_down", "Vol-", show=False),
+        Binding("_", "volume_down", "Vol-", show=False),
     ]
 
     def compose(self):
@@ -247,6 +249,7 @@ class MusicTUI(App):
         if selected == "Volume":
             pass
         elif selected == "Play Mode":
+            settings.toggle_play_mode()
             mode = settings.get_value("Play Mode")
             if mode == "shuffle":
                 self.player.set_play_mode(PlayMode.SHUFFLE)
@@ -255,6 +258,7 @@ class MusicTUI(App):
             else:
                 self.player.set_play_mode(PlayMode.LOOP)
         elif selected == "Theme":
+            settings.cycle_theme()
             theme = settings.get_value("Theme")
             if theme == "nord":
                 self.theme = "nord"
@@ -265,19 +269,21 @@ class MusicTUI(App):
 
     def action_volume_up(self) -> None:
         try:
-            settings = self.query_one("#settings", Settings)
-            settings.adjust_volume(0.1)
-            volume = settings.get_value("Volume")
-            self.player.set_volume(volume)
+            if self.current_view == "settings":
+                settings = self.query_one("#settings", Settings)
+                settings.adjust_volume(0.1)
+            volume = self.player.volume + 0.1
+            self.player.set_volume(min(1.0, volume))
         except Exception:
             pass
 
     def action_volume_down(self) -> None:
         try:
-            settings = self.query_one("#settings", Settings)
-            settings.adjust_volume(-0.1)
-            volume = settings.get_value("Volume")
-            self.player.set_volume(volume)
+            if self.current_view == "settings":
+                settings = self.query_one("#settings", Settings)
+                settings.adjust_volume(-0.1)
+            volume = self.player.volume - 0.1
+            self.player.set_volume(max(0.0, volume))
         except Exception:
             pass
 
