@@ -13,3 +13,125 @@ async def test_app_startup():
         assert app.query_one("#track-list") is not None
         assert app.query_one("#player-bar") is not None
         assert app.query_one("#status-bar") is not None
+
+
+@pytest.mark.asyncio
+async def test_navigate_tracks():
+    """Test navigating tracks with j/k keys"""
+    from src.app import MusicTUI
+
+    app = MusicTUI()
+    async with app.run_test() as pilot:
+        track_list = app.query_one("#track-list")
+        initial_index = track_list.selected_index
+
+        # Press j to move down
+        await pilot.press("j")
+        await pilot.pause()
+
+        assert track_list.selected_index == initial_index + 1
+
+        # Press k to move up
+        await pilot.press("k")
+        await pilot.pause()
+
+        assert track_list.selected_index == initial_index
+
+
+@pytest.mark.asyncio
+async def test_play_track():
+    """Test pressing Enter plays the selected track"""
+    from src.app import MusicTUI
+    from src.models import PlayerState
+
+    app = MusicTUI()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+
+        # Press Enter to play
+        await pilot.press("enter")
+        await pilot.pause()
+
+        # Verify player state changed
+        assert app.player.state == PlayerState.PLAYING
+
+
+@pytest.mark.asyncio
+async def test_play_pause():
+    """Test space toggles play/pause"""
+    from src.app import MusicTUI
+    from src.models import PlayerState
+
+    app = MusicTUI()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+
+        # Start playing
+        await pilot.press("enter")
+        await pilot.pause()
+        assert app.player.state == PlayerState.PLAYING
+
+        # Pause
+        await pilot.press("space")
+        await pilot.pause()
+        assert app.player.state == PlayerState.PAUSED
+
+        # Resume
+        await pilot.press("space")
+        await pilot.pause()
+        assert app.player.state == PlayerState.PLAYING
+
+
+@pytest.mark.asyncio
+async def test_next_previous_track():
+    """Test n/p keys for next/previous track"""
+    from src.app import MusicTUI
+    from src.models import Track
+
+    app = MusicTUI()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+
+        # Add multiple tracks to queue
+        track1 = Track(file_path="/test1.mp3", title="Test1")
+        track2 = Track(file_path="/test2.mp3", title="Test2")
+        app.player.add_to_queue(track1)
+        app.player.add_to_queue(track2)
+
+        # Play first track
+        app.player.play(track1)
+        await pilot.pause()
+
+        initial_track = app.player.get_current_track()
+        assert initial_track.title == "Test1"
+
+        # Next track
+        await pilot.press("n")
+        await pilot.pause()
+
+        next_track = app.player.get_current_track()
+        assert next_track.title == "Test2"
+
+        # Previous track
+        await pilot.press("p")
+        await pilot.pause()
+
+        prev_track = app.player.get_current_track()
+        assert prev_track.title == "Test1"
+
+
+@pytest.mark.asyncio
+async def test_quit():
+    """Test q key exits the app"""
+    from src.app import MusicTUI
+
+    app = MusicTUI()
+    async with app.run_test() as pilot:
+        await pilot.pause()
+
+        # Press q to quit
+        await pilot.press("q")
+        await pilot.pause()
+
+        # App should have exited
+        assert app._exit
