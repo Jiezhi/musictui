@@ -58,8 +58,10 @@ class TrackList(Static):
 
     def set_tracks(self, tracks: list[Track], total_count: int = 0) -> None:
         self.tracks = tracks
-        # Default to second-to-last item for easier inspection during startup
-        self.selected_index = max(0, len(tracks) - 2)
+        # Clamp selected_index to valid range
+        max_index = max(0, len(tracks) - 1)
+        if self.selected_index > max_index:
+            self.selected_index = max_index
         self._track_offset = 0
         self.total_count = total_count
         self._render()
@@ -71,14 +73,12 @@ class TrackList(Static):
             lines = []
             for i, track in enumerate(self.tracks):
                 prefix = "> " if i == self.selected_index else "  "
-                # Prepend index to each track for easier debugging
                 lines.append(f"{i + 1}. {prefix}{track.display_name}")
             new_content = "\n".join(lines)
 
-        self._last_rendered_content = ""
-        self.update(new_content)
         self._last_rendered_content = new_content
-        # Use call_later to scroll AFTER the content is rendered
+        self.update(new_content)
+        self.refresh()
         self.call_later(self.scroll_to_selection)
 
     def load_more(self) -> None:
