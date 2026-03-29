@@ -1349,6 +1349,10 @@ class Library:
                 FOREIGN KEY (track_id) REFERENCES tracks(id)
             )
         """)
+        try:
+            conn.execute("ALTER TABLE tracks ADD COLUMN cover TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
         conn.commit()
         conn.close()
 
@@ -1396,8 +1400,8 @@ class Library:
         conn = self._get_connection()
         cursor = conn.execute(
             """INSERT OR REPLACE INTO tracks 
-               (file_path, title, artist, album, duration, genre, year, track_number)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+               (file_path, title, artist, album, duration, genre, year, track_number, cover)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 track.file_path,
                 track.title,
@@ -1407,6 +1411,7 @@ class Library:
                 track.genre,
                 track.year,
                 track.track_number,
+                track.cover,
             ),
         )
         track.id = cursor.lastrowid
@@ -1424,12 +1429,13 @@ class Library:
             genre=row[6],
             year=row[7],
             track_number=row[8],
+            cover=row[9] if len(row) > 9 else "",
         )
 
     def get_all_tracks(self, offset: int = 0, limit: int = 100000) -> list[Track]:
         conn = self._get_connection()
         cursor = conn.execute(
-            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number FROM tracks LIMIT ? OFFSET ?",
+            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number, cover FROM tracks LIMIT ? OFFSET ?",
             (limit, offset),
         )
         tracks = [self._row_to_track(row) for row in cursor.fetchall()]
@@ -1485,7 +1491,7 @@ class Library:
     def get_track_by_id(self, track_id: int) -> Optional[Track]:
         conn = self._get_connection()
         cursor = conn.execute(
-            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number FROM tracks WHERE id = ?",
+            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number, cover FROM tracks WHERE id = ?",
             (track_id,),
         )
         row = cursor.fetchone()
