@@ -1,8 +1,0 @@
-__init__
-__main__
-app
-config
-library
-models
-player
-ui

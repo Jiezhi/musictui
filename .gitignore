@@ -1,7 +1,25 @@
 .worktrees/
 
+# Local config
+config/settings.json
+
 # Python bytecode
 __pycache__/
 *.py[cod]
 *.class
 *.pyc
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
