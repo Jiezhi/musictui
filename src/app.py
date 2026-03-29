@@ -308,11 +308,11 @@ class MusicTUI(App):
             settings.cycle_theme()
             theme = settings.get_value("Theme")
             if theme == "nord":
-                self.theme = "nord"
+                self.theme("nord")
             elif theme == "dracula":
-                self.theme = "dracula"
+                self.theme("dracula")
             else:
-                self.theme = "monokai"
+                self.theme("monokai")
 
     def action_volume_up(self) -> None:
         try:
