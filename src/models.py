@@ -27,6 +27,7 @@ class Track:
     genre: str = ""
     year: Optional[int] = None
     track_number: Optional[int] = None
+    cover: str = ""  # Remote cover URL
 
     @property
     def display_name(self) -> str:

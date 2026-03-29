@@ -1,5 +1,7 @@
 import sqlite3
 import re
+import json
+import requests
 from pathlib import Path
 from typing import Optional
 from mutagen import File as MutagenFile
@@ -1349,6 +1351,10 @@ class Library:
                 FOREIGN KEY (track_id) REFERENCES tracks(id)
             )
         """)
+        try:
+            conn.execute("ALTER TABLE tracks ADD COLUMN cover TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
         conn.commit()
         conn.close()
 
@@ -1396,8 +1402,8 @@ class Library:
         conn = self._get_connection()
         cursor = conn.execute(
             """INSERT OR REPLACE INTO tracks 
-               (file_path, title, artist, album, duration, genre, year, track_number)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+               (file_path, title, artist, album, duration, genre, year, track_number, cover)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 track.file_path,
                 track.title,
@@ -1407,6 +1413,7 @@ class Library:
                 track.genre,
                 track.year,
                 track.track_number,
+                track.cover,
             ),
         )
         track.id = cursor.lastrowid
@@ -1424,12 +1431,13 @@ class Library:
             genre=row[6],
             year=row[7],
             track_number=row[8],
+            cover=row[9] if len(row) > 9 else "",
         )
 
     def get_all_tracks(self, offset: int = 0, limit: int = 100000) -> list[Track]:
         conn = self._get_connection()
         cursor = conn.execute(
-            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number FROM tracks LIMIT ? OFFSET ?",
+            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number, cover FROM tracks LIMIT ? OFFSET ?",
             (limit, offset),
         )
         tracks = [self._row_to_track(row) for row in cursor.fetchall()]
@@ -1485,7 +1493,7 @@ class Library:
     def get_track_by_id(self, track_id: int) -> Optional[Track]:
         conn = self._get_connection()
         cursor = conn.execute(
-            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number FROM tracks WHERE id = ?",
+            "SELECT id, file_path, title, artist, album, duration, genre, year, track_number, cover FROM tracks WHERE id = ?",
             (track_id,),
         )
         row = cursor.fetchone()
@@ -1580,3 +1588,91 @@ class Library:
         tracks = [self._row_to_track(row) for row in cursor.fetchall()]
         conn.close()
         return tracks
+
+    def _parse_remote_content(self, content: str) -> list[Track]:
+        """Parse remote content (JS or JSON format) to Track list"""
+        if content.strip().startswith("["):
+            return self._parse_json_format(content)
+        return self._parse_js_format(content)
+
+    def _parse_js_format(self, content: str) -> list[Track]:
+        """Parse JS format: var list = [{name, artist, url, cover}, ...]"""
+        tracks = []
+        match = re.search(r"var\s+list\s*=\s*(\[.*?\]);", content, re.DOTALL)
+        if not match:
+            return tracks
+
+        array_content = match.group(1)
+        obj_matches = re.findall(r"\{([^}]+)\}", array_content)
+
+        for obj in obj_matches:
+            track = self._parse_js_object(obj)
+            if track:
+                tracks.append(track)
+
+        return tracks
+
+    def _parse_js_object(self, obj_str: str) -> Track | None:
+        """Parse a single JS object"""
+        try:
+            name_match = re.search(r'name:\s*"([^"]+)"', obj_str)
+            artist_match = re.search(r'artist:\s*"([^"]+)"', obj_str)
+            url_match = re.search(r'url:\s*"([^"]+)"', obj_str)
+            cover_match = re.search(r'cover:\s*"([^"]+)"', obj_str)
+
+            if not name_match or not url_match:
+                return None
+
+            return Track(
+                title=name_match.group(1),
+                artist=artist_match.group(1) if artist_match else "",
+                file_path=url_match.group(1),
+                cover=cover_match.group(1) if cover_match else "",
+            )
+        except Exception:
+            return None
+
+    def _parse_json_format(self, content: str) -> list[Track]:
+        """Parse JSON format"""
+        tracks = []
+        try:
+            data = json.loads(content)
+            if not isinstance(data, list):
+                return tracks
+
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                if not item.get("name") or not item.get("url"):
+                    continue
+
+                tracks.append(
+                    Track(
+                        title=item.get("name", ""),
+                        artist=item.get("artist", ""),
+                        file_path=item.get("url", ""),
+                        cover=item.get("cover", ""),
+                    )
+                )
+        except json.JSONDecodeError:
+            pass
+
+        return tracks
+
+    def fetch_remote_list(self, url: str) -> list[Track]:
+        """Fetch and parse song list from remote URL"""
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            content = response.text
+            return self._parse_remote_content(content)
+        except requests.RequestException as e:
+            raise ValueError(f"Failed to fetch: {str(e)}")
+
+    def save_remote_tracks(self, tracks: list[Track]) -> int:
+        """Save remote tracks to database, return count"""
+        count = 0
+        for track in tracks:
+            self._save_track(track)
+            count += 1
+        return count
