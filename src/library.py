@@ -1337,6 +1337,18 @@ class Library:
                 track_number INTEGER
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS favorites (
+                track_id INTEGER PRIMARY KEY,
+                FOREIGN KEY (track_id) REFERENCES tracks(id)
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS blacklist (
+                track_id INTEGER PRIMARY KEY,
+                FOREIGN KEY (track_id) REFERENCES tracks(id)
+            )
+        """)
         conn.commit()
         conn.close()
 
@@ -1479,3 +1491,92 @@ class Library:
         row = cursor.fetchone()
         conn.close()
         return self._row_to_track(row) if row else None
+
+    def add_favorite(self, track_id: int) -> bool:
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                "INSERT OR IGNORE INTO favorites (track_id) VALUES (?)", (track_id,)
+            )
+            conn.commit()
+            result = True
+        except Exception:
+            result = False
+        finally:
+            conn.close()
+        return result
+
+    def remove_favorite(self, track_id: int) -> bool:
+        conn = self._get_connection()
+        try:
+            conn.execute("DELETE FROM favorites WHERE track_id = ?", (track_id,))
+            conn.commit()
+            result = True
+        except Exception:
+            result = False
+        finally:
+            conn.close()
+        return result
+
+    def is_favorite(self, track_id: int) -> bool:
+        conn = self._get_connection()
+        cursor = conn.execute("SELECT 1 FROM favorites WHERE track_id = ?", (track_id,))
+        result = cursor.fetchone() is not None
+        conn.close()
+        return result
+
+    def get_favorites(self) -> list[Track]:
+        conn = self._get_connection()
+        cursor = conn.execute(
+            """SELECT t.id, t.file_path, t.title, t.artist, t.album, t.duration, t.genre, t.year, t.track_number 
+               FROM tracks t INNER JOIN favorites f ON t.id = f.track_id"""
+        )
+        tracks = [self._row_to_track(row) for row in cursor.fetchall()]
+        conn.close()
+        return tracks
+
+    def add_to_blacklist(self, track_id: int) -> bool:
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                "INSERT OR IGNORE INTO blacklist (track_id) VALUES (?)", (track_id,)
+            )
+            conn.commit()
+            result = True
+        except Exception:
+            result = False
+        finally:
+            conn.close()
+        return result
+
+    def remove_from_blacklist(self, track_id: int) -> bool:
+        conn = self._get_connection()
+        try:
+            conn.execute("DELETE FROM blacklist WHERE track_id = ?", (track_id,))
+            conn.commit()
+            result = True
+        except Exception:
+            result = False
+        finally:
+            conn.close()
+        return result
+
+    def is_blacklisted(self, track_id: int) -> bool:
+        conn = self._get_connection()
+        cursor = conn.execute("SELECT 1 FROM blacklist WHERE track_id = ?", (track_id,))
+        result = cursor.fetchone() is not None
+        conn.close()
+        return result
+
+    def get_tracks_excluding_blacklist(
+        self, offset: int = 0, limit: int = 100000
+    ) -> list[Track]:
+        conn = self._get_connection()
+        cursor = conn.execute(
+            """SELECT id, file_path, title, artist, album, duration, genre, year, track_number 
+               FROM tracks WHERE id NOT IN (SELECT track_id FROM blacklist) LIMIT ? OFFSET ?""",
+            (limit, offset),
+        )
+        tracks = [self._row_to_track(row) for row in cursor.fetchall()]
+        conn.close()
+        return tracks

@@ -58,7 +58,8 @@ class MusicTUI(App):
         Binding("1", "show_library", "Library", show=False),
         Binding("2", "show_queue", "Queue", show=False),
         Binding("3", "show_search", "Search", show=False),
-        Binding("4", "show_settings", "Settings", show=False),
+        Binding("4", "show_favorites", "Favorites", show=False),
+        Binding("5", "show_settings", "Settings", show=False),
         Binding("l", "sidebar_up", "Sidebar Up", show=False),
         Binding("h", "sidebar_down", "Sidebar Down", show=False),
         Binding("+", "volume_up", "Vol+", show=False),
@@ -67,6 +68,9 @@ class MusicTUI(App):
         Binding("_", "volume_down", "Vol-", show=False),
         Binding("backspace", "search_backspace", "Backspace", show=False),
         Binding("escape", "clear_search", "Clear", show=False),
+        Binding("f", "add_favorite", "Favorite", show=False),
+        Binding("u", "remove_favorite", "Unfavorite", show=False),
+        Binding("b", "add_to_blacklist", "Block", show=False),
     ]
 
     SEARCH_KEYS = [
@@ -443,7 +447,7 @@ class MusicTUI(App):
             settings = self.query_one("#settings", Settings)
             settings.styles.display = "block"
             sidebar = self.query_one("#sidebar", Sidebar)
-            sidebar.selected = 3
+            sidebar.selected = 4
             sidebar._update_content()
         except Exception:
             pass
@@ -474,7 +478,84 @@ class MusicTUI(App):
                 self.action_show_queue()
             elif selected == "Search":
                 self.action_show_search()
+            elif selected == "Favorites":
+                self.action_show_favorites()
             elif selected == "Settings":
                 self.action_show_settings()
+        except Exception:
+            pass
+
+    def _show_status_message(self, message: str) -> None:
+        try:
+            status_bar = self.query_one("#status-bar", StatusBar)
+            status_bar.update(message)
+        except Exception:
+            pass
+
+    def action_add_favorite(self) -> None:
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track = track_list.get_selected_track()
+            if track and track.id:
+                if self.library.add_favorite(track.id):
+                    self._show_status_message(
+                        f"Added to favorites: {track.display_name}"
+                    )
+                else:
+                    self._show_status_message(
+                        f"Already in favorites: {track.display_name}"
+                    )
+        except Exception:
+            pass
+
+    def action_remove_favorite(self) -> None:
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track = track_list.get_selected_track()
+            if track and track.id:
+                if self.library.remove_favorite(track.id):
+                    self._show_status_message(
+                        f"Removed from favorites: {track.display_name}"
+                    )
+                else:
+                    self._show_status_message(f"Not in favorites: {track.display_name}")
+        except Exception:
+            pass
+
+    def action_add_to_blacklist(self) -> None:
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            track = track_list.get_selected_track()
+            if track and track.id:
+                if self.library.add_to_blacklist(track.id):
+                    self._show_status_message(
+                        f"Added to blacklist: {track.display_name}"
+                    )
+                    if (
+                        self.player.get_current_track()
+                        and self.player.get_current_track().id == track.id
+                    ):
+                        self.player.next()
+                else:
+                    self._show_status_message(
+                        f"Already in blacklist: {track.display_name}"
+                    )
+        except Exception:
+            pass
+
+    def action_show_favorites(self) -> None:
+        self.current_view = "favorites"
+        try:
+            track_list = self.query_one("#track-list", TrackList)
+            settings = self.query_one("#settings", Settings)
+            settings.styles.display = "none"
+            search = self.query_one("#search", Search)
+            search.styles.display = "none"
+            favorites = self.library.get_favorites()
+            track_list.set_tracks(favorites, len(favorites))
+            track_list.styles.display = "block"
+            sidebar = self.query_one("#sidebar", Sidebar)
+            sidebar.selected = 3
+            sidebar._update_content()
         except Exception:
             pass

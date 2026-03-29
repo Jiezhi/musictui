@@ -3,7 +3,7 @@ from textual.widgets import Static
 
 class Sidebar(Static):
     def __init__(self, **kwargs):
-        items = ["Library", "Queue", "Search", "Settings"]
+        items = ["Library", "Queue", "Search", "Favorites", "Settings"]
         super().__init__("\n".join(items), **kwargs)
         self.items = items
         self.selected = 0
