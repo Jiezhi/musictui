@@ -3,7 +3,7 @@ from textual.app import App
 from textual import work
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
-from src.config import get_config
+from src.config import get_config, save_config
 from src.player import Player
 from src.library import Library
 from src.ui.player_bar import PlayerBar
@@ -168,6 +168,10 @@ class MusicTUI(App):
         self.library = Library(os.path.expanduser("~/.musictui/music.db"))
 
         settings = self.query_one("#settings", Settings)
+        settings.values["Volume"] = self.config.player.volume
+        settings.values["Play Mode"] = self.config.player.play_mode
+        settings.values["Theme"] = self.config.ui.theme
+        settings._update_content()
         settings.styles.display = "none"
 
         search = self.query_one("#search", Search)
@@ -294,7 +298,10 @@ class MusicTUI(App):
     def _apply_settings_change(self, settings) -> None:
         selected = settings.get_selected()
         if selected == "Volume":
-            pass
+            volume = settings.get_value("Volume")
+            self.player.set_volume(volume)
+            self.config.player.volume = volume
+            save_config(self.config)
         elif selected == "Play Mode":
             settings.toggle_play_mode()
             mode = settings.get_value("Play Mode")
@@ -304,6 +311,8 @@ class MusicTUI(App):
                 self.player.set_play_mode(PlayMode.SINGLE)
             else:
                 self.player.set_play_mode(PlayMode.LOOP)
+            self.config.player.play_mode = mode
+            save_config(self.config)
         elif selected == "Theme":
             settings.cycle_theme()
             theme = settings.get_value("Theme")
@@ -313,6 +322,8 @@ class MusicTUI(App):
                 self.theme("dracula")
             else:
                 self.theme("monokai")
+            self.config.ui.theme = theme
+            save_config(self.config)
 
     def action_volume_up(self) -> None:
         try:
@@ -321,6 +332,8 @@ class MusicTUI(App):
                 settings.adjust_volume(0.1)
             volume = self.player.volume + 0.1
             self.player.set_volume(min(1.0, volume))
+            self.config.player.volume = self.player.volume
+            save_config(self.config)
         except Exception:
             pass
 
@@ -331,6 +344,8 @@ class MusicTUI(App):
                 settings.adjust_volume(-0.1)
             volume = self.player.volume - 0.1
             self.player.set_volume(max(0.0, volume))
+            self.config.player.volume = self.player.volume
+            save_config(self.config)
         except Exception:
             pass
 
