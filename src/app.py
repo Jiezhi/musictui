@@ -284,7 +284,15 @@ class MusicTUI(App):
         try:
             track_list = self.query_one("#track-list", TrackList)
             track_list.set_tracks(self.tracks, self.total_tracks)
+            # Attempt an immediate scroll to ensure the selected item is visible
+            try:
+                track_list.scroll_to_selection()
+            except Exception:
+                pass
             track_list.set_load_more_callback(self._load_more_tracks)
+            # Ensure the initial selection is visible after the first render
+            # Allow layout to complete before scrolling
+            self.call_later(lambda: track_list.scroll_to_selection())
         except Exception as e:
             print(f"Error: {e}")
             self.set_timer(0.1, self._load_library)
@@ -569,7 +577,12 @@ class MusicTUI(App):
     def action_show_library(self) -> None:
         self.current_view = "library"
         try:
+            # Refresh library data when showing library view
+            self.total_tracks = self.library.get_total_count()
+            self.tracks = self.library.get_all_tracks(limit=50)
+
             track_list = self.query_one("#track-list", TrackList)
+            track_list.set_tracks(self.tracks, self.total_tracks)
             track_list.styles.display = "block"
             settings = self.query_one("#settings", Settings)
             settings.styles.display = "none"
