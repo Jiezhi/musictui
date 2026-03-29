@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import Mock, patch
 from src.ui.track_list import TrackList
 from src.models import Track
+from types import SimpleNamespace
 
 
 class TestTrackList:
@@ -215,3 +216,37 @@ class TestTrackList:
         with patch.object(track_list, "refresh") as mock_refresh:
             track_list.page_down()
             mock_refresh.assert_called()
+
+
+def test_append_tracks_scrolls_to_selection_when_out_of_view():
+    tl = TrackList()
+    # Create 60 initial tracks
+    initial_tracks = [
+        Track(id=i, title=f"Song {i}", file_path=f"/{i}.mp3") for i in range(60)
+    ]
+    tl.set_tracks(initial_tracks, total_count=60)
+    # Move selection well past the initial visible window
+    tl.selected_index = 25
+    # Simulate scroll position; height will fall back to default in code
+    tl.scroll_y = 0
+
+    # Prepare new tracks to append
+    new_tracks = [
+        Track(id=60 + i, title=f"Song {60 + i}", file_path=f"/{60 + i}.mp3")
+        for i in range(5)
+    ]
+
+    with (
+        patch.object(tl, "refresh") as mock_refresh,
+        patch.object(tl, "call_later") as mock_call_later,
+        patch.object(tl, "update") as mock_update,
+    ):
+        tl.append_tracks(new_tracks)
+        mock_refresh.assert_called()
+        mock_update.assert_called()
+        # Expect call_later to be invoked to schedule scroll AFTER rendering
+        # (called from _render and then from append_tracks)
+        assert mock_call_later.called
+        # Verify scroll_to_selection is one of the callbacks passed to call_later
+        call_args_list = [args[0] for args, _ in mock_call_later.call_args_list]
+        assert tl.scroll_to_selection in call_args_list

@@ -26,22 +26,26 @@ class TrackList(Static):
             lines = []
             for i, track in enumerate(self.tracks):
                 prefix = "> " if i == self.selected_index else "  "
-                lines.append(f"{prefix}{track.display_name}")
+                # Prepend index to each track for easier debugging
+                lines.append(f"{i + 1}. {prefix}{track.display_name}")
             new_content = "\n".join(lines)
 
         self._last_rendered_content = new_content
         self.update(new_content)
         self.refresh()
+        # Use call_later to scroll AFTER the content is rendered (Textual PR #1902)
+        self.call_later(self.scroll_to_selection)
 
     def scroll_to_selection(self) -> None:
         if not self.tracks:
             return
         try:
-            if self.size.height <= 0:
-                return
-            visible_lines = self.size.height
+            # Safely determine visible lines. Fall back to a sane default if size is not set.
+            visible_lines = getattr(self.size, "height", 20)
+            if not isinstance(visible_lines, int) or visible_lines <= 0:
+                visible_lines = 20
             selection_line = self.selected_index
-            current_scroll = self.scroll_y
+            current_scroll = getattr(self, "scroll_y", 0)
             bottom_line = (
                 current_scroll + visible_lines if current_scroll else visible_lines
             )
@@ -54,7 +58,8 @@ class TrackList(Static):
 
     def set_tracks(self, tracks: list[Track], total_count: int = 0) -> None:
         self.tracks = tracks
-        self.selected_index = 0
+        # Default to second-to-last item for easier inspection during startup
+        self.selected_index = max(0, len(tracks) - 2)
         self._track_offset = 0
         self.total_count = total_count
         self._render()
@@ -66,13 +71,15 @@ class TrackList(Static):
             lines = []
             for i, track in enumerate(self.tracks):
                 prefix = "> " if i == self.selected_index else "  "
-                lines.append(f"{prefix}{track.display_name}")
+                # Prepend index to each track for easier debugging
+                lines.append(f"{i + 1}. {prefix}{track.display_name}")
             new_content = "\n".join(lines)
 
         self._last_rendered_content = ""
         self.update(new_content)
         self._last_rendered_content = new_content
-        self.scroll_to_selection()
+        # Use call_later to scroll AFTER the content is rendered
+        self.call_later(self.scroll_to_selection)
 
     def load_more(self) -> None:
         if self._load_more_callback and len(self.tracks) < self.total_count:
@@ -82,6 +89,10 @@ class TrackList(Static):
         self.tracks.extend(tracks)
         self._track_offset = len(self.tracks)
         self._render()
+        # Use call_later to scroll AFTER the content is rendered
+        # This handles scenarios where the selected item was outside the
+        # current viewport and the list needs to scroll to bring it into view.
+        self.call_later(self.scroll_to_selection)
 
     def move_up(self) -> None:
         if self.tracks:
