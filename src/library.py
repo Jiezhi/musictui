@@ -1401,27 +1401,26 @@ class Library:
         conn.commit()
         conn.close()
 
+    def _row_to_track(self, row: tuple) -> Track:
+        return Track(
+            id=row[0],
+            file_path=row[1],
+            title=row[2],
+            artist=row[3],
+            album=row[4],
+            duration=row[5],
+            genre=row[6],
+            year=row[7],
+            track_number=row[8],
+        )
+
     def get_all_tracks(self, offset: int = 0, limit: int = 100000) -> list[Track]:
         conn = self._get_connection()
         cursor = conn.execute(
             "SELECT id, file_path, title, artist, album, duration, genre, year, track_number FROM tracks LIMIT ? OFFSET ?",
             (limit, offset),
         )
-        tracks = []
-        for row in cursor.fetchall():
-            tracks.append(
-                Track(
-                    id=row[0],
-                    file_path=row[1],
-                    title=row[2],
-                    artist=row[3],
-                    album=row[4],
-                    duration=row[5],
-                    genre=row[6],
-                    year=row[7],
-                    track_number=row[8],
-                )
-            )
+        tracks = [self._row_to_track(row) for row in cursor.fetchall()]
         conn.close()
         return tracks
 
@@ -1443,21 +1442,7 @@ class Library:
             (pattern, pattern, pattern),
         )
 
-        tracks = []
-        for row in cursor.fetchall():
-            tracks.append(
-                Track(
-                    id=row[0],
-                    file_path=row[1],
-                    title=row[2],
-                    artist=row[3],
-                    album=row[4],
-                    duration=row[5],
-                    genre=row[6],
-                    year=row[7],
-                    track_number=row[8],
-                )
-            )
+        tracks = [self._row_to_track(row) for row in cursor.fetchall()]
 
         if not tracks:
             query_lower = query.lower()
@@ -1493,16 +1478,4 @@ class Library:
         )
         row = cursor.fetchone()
         conn.close()
-        if row:
-            return Track(
-                id=row[0],
-                file_path=row[1],
-                title=row[2],
-                artist=row[3],
-                album=row[4],
-                duration=row[5],
-                genre=row[6],
-                year=row[7],
-                track_number=row[8],
-            )
-        return None
+        return self._row_to_track(row) if row else None

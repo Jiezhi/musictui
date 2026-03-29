@@ -1,8 +1,7 @@
 import os
 from textual.app import App
-from textual import work
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container
 from src.config import get_config, save_config
 from src.player import Player
 from src.library import Library
@@ -273,10 +272,6 @@ class MusicTUI(App):
         except Exception:
             pass
 
-    def _apply_volume_change(self, settings) -> None:
-        volume = settings.get_value("Volume")
-        self.player.set_volume(volume)
-
     def action_play_selected(self) -> None:
         try:
             if self.current_view == "settings":
@@ -399,6 +394,8 @@ class MusicTUI(App):
             track_list.styles.display = "block"
             settings = self.query_one("#settings", Settings)
             settings.styles.display = "none"
+            search = self.query_one("#search", Search)
+            search.styles.display = "none"
             sidebar = self.query_one("#sidebar", Sidebar)
             sidebar.selected = 0
             sidebar._update_content()

@@ -1,5 +1,7 @@
-import pygame
+import random
 from typing import Optional, Callable
+
+import pygame
 from src.models import Track, PlayerState, PlayMode
 
 
@@ -83,7 +85,6 @@ class Player:
             return
 
         if self.play_mode == PlayMode.SHUFFLE:
-            import random
             self.current_index = random.randint(0, len(self.queue) - 1)
         else:
             self.current_index = (self.current_index + 1) % len(self.queue)
