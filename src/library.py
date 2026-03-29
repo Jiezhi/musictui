@@ -1448,7 +1448,7 @@ class Library:
         pattern = f"%{query}%"
 
         cursor = conn.execute(
-            """SELECT id, file_path, title, artist, album, duration, genre, year, track_number 
+            """SELECT id, file_path, title, artist, album, duration, genre, year, track_number, cover
                FROM tracks 
                WHERE title LIKE ? OR artist LIKE ? OR album LIKE ?""",
             (pattern, pattern, pattern),
@@ -1528,7 +1528,7 @@ class Library:
     def get_favorites(self) -> list[Track]:
         conn = self._get_connection()
         cursor = conn.execute(
-            """SELECT t.id, t.file_path, t.title, t.artist, t.album, t.duration, t.genre, t.year, t.track_number 
+            """SELECT t.id, t.file_path, t.title, t.artist, t.album, t.duration, t.genre, t.year, t.track_number, t.cover
                FROM tracks t INNER JOIN favorites f ON t.id = f.track_id"""
         )
         tracks = [self._row_to_track(row) for row in cursor.fetchall()]
@@ -1573,7 +1573,7 @@ class Library:
     ) -> list[Track]:
         conn = self._get_connection()
         cursor = conn.execute(
-            """SELECT id, file_path, title, artist, album, duration, genre, year, track_number 
+            """SELECT id, file_path, title, artist, album, duration, genre, year, track_number, cover
                FROM tracks WHERE id NOT IN (SELECT track_id FROM blacklist) LIMIT ? OFFSET ?""",
             (limit, offset),
         )
