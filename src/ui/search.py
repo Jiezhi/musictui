@@ -13,6 +13,7 @@ class Search(Static):
         self.results: list[Track] = []
         self.selected_index = 0
         self._library = None
+        self._last_rendered_content = ""
 
     def set_library(self, library: "Library") -> None:
         self._library = library
@@ -52,16 +53,20 @@ class Search(Static):
 
     def _render(self) -> None:
         if not self.query:
-            self.update("Search: (type to search)\n")
+            new_content = "Search: (type to search)\n"
         elif not self.results:
-            self.update(f"Search: {self.query}\n\nNo results found.")
+            new_content = f"Search: {self.query}\n\nNo results found."
         else:
             lines = [f"Search: {self.query}"]
             for i, track in enumerate(self.results):
                 prefix = "> " if i == self.selected_index else "  "
                 lines.append(f"{prefix}{track.display_name}")
             lines.append(f"\n[{len(self.results)} results]")
-            self.update("\n".join(lines))
+            new_content = "\n".join(lines)
+
+        self.update(new_content)
+        self._last_rendered_content = new_content
+        self.refresh()
 
     def move_up(self) -> None:
         if self.results:
@@ -71,6 +76,16 @@ class Search(Static):
     def move_down(self) -> None:
         if self.results:
             self.selected_index = (self.selected_index + 1) % len(self.results)
+            self._render()
+
+    def page_up(self) -> None:
+        if self.results:
+            self.selected_index = max(0, self.selected_index - 20)
+            self._render()
+
+    def page_down(self) -> None:
+        if self.results:
+            self.selected_index = min(len(self.results) - 1, self.selected_index + 20)
             self._render()
 
     def get_selected_track(self) -> Optional[Track]:

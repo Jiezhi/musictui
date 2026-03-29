@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import Mock, patch
 from src.ui.track_list import TrackList
 from src.models import Track
 
@@ -120,3 +121,97 @@ class TestTrackList:
 
         track_list.load_more()
         assert called == False
+
+    def test_page_up(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=i, title=f"Song {i}", file_path=f"/{i}.mp3") for i in range(30)
+        ]
+        track_list.set_tracks(tracks, 30)
+        track_list.selected_index = 15
+        track_list.page_up()
+        assert track_list.selected_index == 0
+
+    def test_page_up_at_top(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=i, title=f"Song {i}", file_path=f"/{i}.mp3") for i in range(30)
+        ]
+        track_list.set_tracks(tracks, 30)
+        track_list.selected_index = 5
+        track_list.page_up()
+        assert track_list.selected_index == 0
+
+    def test_page_down(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=i, title=f"Song {i}", file_path=f"/{i}.mp3") for i in range(30)
+        ]
+        track_list.set_tracks(tracks, 30)
+        track_list.selected_index = 5
+        track_list.page_down()
+        assert track_list.selected_index == 25
+
+    def test_page_down_at_bottom(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=i, title=f"Song {i}", file_path=f"/{i}.mp3") for i in range(30)
+        ]
+        track_list.set_tracks(tracks, 30)
+        track_list.selected_index = 25
+        track_list.page_down()
+        assert track_list.selected_index == 29
+
+    def test_render_calls_refresh(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=1, title="Song 1", file_path="/a.mp3"),
+            Track(id=2, title="Song 2", file_path="/b.mp3"),
+        ]
+        with patch.object(track_list, "refresh") as mock_refresh:
+            track_list.set_tracks(tracks, 2)
+            mock_refresh.assert_called()
+
+    def test_move_down_triggers_refresh(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=1, title="Song 1", file_path="/a.mp3"),
+            Track(id=2, title="Song 2", file_path="/b.mp3"),
+        ]
+        track_list.set_tracks(tracks, 2)
+        with patch.object(track_list, "refresh") as mock_refresh:
+            track_list.move_down()
+            mock_refresh.assert_called()
+
+    def test_move_up_triggers_refresh(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=1, title="Song 1", file_path="/a.mp3"),
+            Track(id=2, title="Song 2", file_path="/b.mp3"),
+        ]
+        track_list.set_tracks(tracks, 2)
+        track_list.selected_index = 1
+        with patch.object(track_list, "refresh") as mock_refresh:
+            track_list.move_up()
+            mock_refresh.assert_called()
+
+    def test_page_up_triggers_refresh(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=i, title=f"Song {i}", file_path=f"/{i}.mp3") for i in range(30)
+        ]
+        track_list.set_tracks(tracks, 30)
+        track_list.selected_index = 15
+        with patch.object(track_list, "refresh") as mock_refresh:
+            track_list.page_up()
+            mock_refresh.assert_called()
+
+    def test_page_down_triggers_refresh(self):
+        track_list = TrackList()
+        tracks = [
+            Track(id=i, title=f"Song {i}", file_path=f"/{i}.mp3") for i in range(30)
+        ]
+        track_list.set_tracks(tracks, 30)
+        with patch.object(track_list, "refresh") as mock_refresh:
+            track_list.page_down()
+            mock_refresh.assert_called()

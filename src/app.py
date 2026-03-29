@@ -12,6 +12,7 @@ from src.ui.settings import Settings
 from src.ui.search import Search
 from src.ui.status_bar import StatusBar
 from src.ui.queue import Queue
+from src.ui.command_input import CommandInput
 from src.models import PlayerState, PlayMode
 
 
@@ -31,6 +32,8 @@ class MusicTUI(App):
     }
     #track-list {
         width: 1fr;
+        height: 100%;
+        overflow-y: auto;
     }
     #player-bar {
         height: 3;
@@ -44,6 +47,25 @@ class MusicTUI(App):
     }
     #queue {
         width: 1fr;
+        height: 100%;
+        overflow-y: auto;
+    }
+    #command-input {
+        dock: bottom;
+        height: 1;
+        background: $accent;
+        color: $text;
+        padding: 0 1;
+    }
+    #search {
+        width: 1fr;
+        height: 100%;
+        overflow-y: auto;
+    }
+    #settings {
+        width: 1fr;
+        height: 100%;
+        overflow-y: auto;
     }
     """
 
@@ -69,11 +91,59 @@ class MusicTUI(App):
         Binding("backspace", "search_backspace", "Backspace", show=False),
         Binding("escape", "clear_search", "Clear", show=False),
         Binding("f", "add_favorite", "Favorite", show=False),
-        Binding("u", "remove_favorite", "Unfavorite", show=False),
+        Binding("u", "add_url", "Add URL", show=False),
         Binding("b", "add_to_blacklist", "Block", show=False),
+        Binding(":", "start_command", "Command", show=False),
+        Binding("pageup", "page_up", "Page Up", show=False),
+        Binding("pagedown", "page_down", "Page Down", show=False),
+        Binding("ctrl+b", "page_up", "Page Up", show=False),
+        Binding("ctrl+f", "page_down", "Page Down", show=False),
     ]
 
     SEARCH_KEYS = [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "v",
+        "w",
+        "x",
+        "y",
+        "z",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "-",
+        "_",
+        " ",
+        ".",
+        "@",
+    ]
+
+    COMMAND_KEYS = [
         "a",
         "b",
         "c",
@@ -112,9 +182,9 @@ class MusicTUI(App):
         "9",
         "-",
         "_",
-        " ",
         ".",
-        "@",
+        "/",
+        ":",
     ]
 
     def compose(self):
@@ -124,6 +194,7 @@ class MusicTUI(App):
             yield Settings(id="settings")
             yield Search(id="search")
             yield Queue(id="queue")
+            yield CommandInput(id="command-input")
             yield PlayerBar(id="player-bar")
             yield StatusBar(id="status-bar")
 
@@ -183,6 +254,13 @@ class MusicTUI(App):
 
         queue = self.query_one("#queue", Queue)
         queue.styles.display = "none"
+
+        command_input = self.query_one("#command-input", CommandInput)
+        command_input.styles.display = "none"
+
+        self.command_mode = False
+        self._add_search_key_bindings()
+        self._add_command_key_bindings()
 
         self.total_tracks = self.library.get_total_count()
         if self.total_tracks == 0:
@@ -277,6 +355,9 @@ class MusicTUI(App):
             pass
 
     def action_play_selected(self) -> None:
+        if self.command_mode:
+            self._execute_command()
+            return
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
@@ -359,10 +440,17 @@ class MusicTUI(App):
         for key in self.SEARCH_KEYS:
             self.BINDINGS.append(Binding(key, f"search_input_{key}", "", show=False))
 
+    def _add_command_key_bindings(self) -> None:
+        for key in self.COMMAND_KEYS:
+            self.BINDINGS.append(Binding(key, f"command_input_{key}", "", show=False))
+
     def __getattr__(self, name: str):
         if name.startswith("action_search_input_"):
             key = name.replace("action_search_input_", "")
             return lambda: self._handle_search_input(key)
+        if name.startswith("action_command_input_"):
+            key = name.replace("action_command_input_", "")
+            return lambda: self._handle_command_input(key)
         raise AttributeError(
             f"'{type(self).__name__}' object has no attribute '{name}'"
         )
@@ -375,6 +463,14 @@ class MusicTUI(App):
             except Exception:
                 pass
 
+    def _handle_command_input(self, char: str) -> None:
+        if self.command_mode:
+            try:
+                command_input = self.query_one("#command-input", CommandInput)
+                command_input.append_char(char)
+            except Exception:
+                pass
+
     def action_search_backspace(self) -> None:
         if self.current_view == "search":
             try:
@@ -382,14 +478,93 @@ class MusicTUI(App):
                 search.backspace()
             except Exception:
                 pass
+        if self.command_mode:
+            try:
+                command_input = self.query_one("#command-input", CommandInput)
+                command_input.backspace()
+            except Exception:
+                pass
 
     def action_clear_search(self) -> None:
+        if self.command_mode:
+            self._exit_command_mode()
+            return
         if self.current_view == "search":
             try:
                 search = self.query_one("#search", Search)
                 search.clear()
             except Exception:
                 pass
+
+    def _exit_command_mode(self) -> None:
+        self.command_mode = False
+        try:
+            command_input = self.query_one("#command-input", CommandInput)
+            command_input.clear()
+            command_input.styles.display = "none"
+        except Exception:
+            pass
+        self._show_status_message("")
+
+    def _execute_command(self) -> None:
+        try:
+            command_input = self.query_one("#command-input", CommandInput)
+            command = command_input.get_command().strip()
+        except Exception:
+            return
+
+        if not command:
+            self._exit_command_mode()
+            return
+
+        parts = command.split(None, 1)
+        cmd = parts[0].lower()
+        arg = parts[1] if len(parts) > 1 else ""
+
+        if cmd == "url":
+            self._handle_url_command(arg)
+        elif cmd == "scan":
+            self._handle_scan_command(arg)
+        else:
+            self._show_status_message(f"Unknown command: {cmd}")
+
+        self._exit_command_mode()
+
+    def _handle_url_command(self, url: str) -> None:
+        if not url:
+            self._show_status_message("Usage: url <URL>")
+            return
+
+        self._show_status_message(f"Fetching songs from {url}...")
+        try:
+            tracks = self.library.fetch_remote_list(url)
+            count = self.library.save_remote_tracks(tracks)
+            self.total_tracks = self.library.get_total_count()
+            self.tracks = self.library.get_all_tracks(limit=50)
+            track_list = self.query_one("#track-list", TrackList)
+            track_list.set_tracks(self.tracks, self.total_tracks)
+            self._show_status_message(f"Added {count} songs from {url}")
+        except ValueError as e:
+            self._show_status_message(f"Error: {str(e)}")
+        except Exception as e:
+            self._show_status_message(f"Error: {str(e)}")
+
+    def _handle_scan_command(self, path: str) -> None:
+        if not path:
+            self._show_status_message("Usage: scan <path>")
+            return
+
+        if not os.path.exists(path):
+            self._show_status_message(f"Path not found: {path}")
+            return
+
+        self._show_status_message(f"Scanning {path}...")
+        tracks = self.library.scan_local(path)
+        self.total_tracks = self.library.get_total_count()
+        self.tracks = self.library.get_all_tracks(limit=50)
+        track_list = self.query_one("#track-list", TrackList)
+        track_list.set_tracks(self.tracks, self.total_tracks)
+        self._show_status_message(f"Scanned {len(tracks)} songs from {path}")
 
     def action_show_library(self) -> None:
         self.current_view = "library"
@@ -508,6 +683,22 @@ class MusicTUI(App):
         except Exception:
             pass
 
+    def action_add_url(self) -> None:
+        self._show_status_message("Enter URL: (e.g., https://example.com/songs.js)")
+        self._start_command_mode("url ")
+
+    def _start_command_mode(self, initial_text: str = "") -> None:
+        self.command_mode = True
+        try:
+            command_input = self.query_one("#command-input", CommandInput)
+            command_input.set_command(initial_text)
+            command_input.styles.display = "block"
+        except Exception:
+            pass
+
+    def action_start_command(self) -> None:
+        self._start_command_mode()
+
     def action_remove_favorite(self) -> None:
         try:
             track_list = self.query_one("#track-list", TrackList)
@@ -540,6 +731,42 @@ class MusicTUI(App):
                     self._show_status_message(
                         f"Already in blacklist: {track.display_name}"
                     )
+        except Exception:
+            pass
+
+    def action_page_up(self) -> None:
+        try:
+            if self.current_view == "settings":
+                settings = self.query_one("#settings", Settings)
+                for _ in range(5):
+                    settings.move_up()
+            elif self.current_view == "search":
+                search = self.query_one("#search", Search)
+                search.page_up()
+            elif self.current_view == "queue":
+                queue = self.query_one("#queue", Queue)
+                queue.page_up()
+            else:
+                track_list = self.query_one("#track-list", TrackList)
+                track_list.page_up()
+        except Exception:
+            pass
+
+    def action_page_down(self) -> None:
+        try:
+            if self.current_view == "settings":
+                settings = self.query_one("#settings", Settings)
+                for _ in range(5):
+                    settings.move_down()
+            elif self.current_view == "search":
+                search = self.query_one("#search", Search)
+                search.page_down()
+            elif self.current_view == "queue":
+                queue = self.query_one("#queue", Queue)
+                queue.page_down()
+            else:
+                track_list = self.query_one("#track-list", TrackList)
+                track_list.page_down()
         except Exception:
             pass
 

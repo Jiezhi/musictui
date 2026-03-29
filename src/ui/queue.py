@@ -8,6 +8,7 @@ class Queue(Static):
         super().__init__("Queue is empty.", **kwargs)
         self.tracks: list[Track] = []
         self.selected_index = 0
+        self._last_rendered_content = ""
 
     def set_tracks(self, tracks: list[Track]) -> None:
         self.tracks = tracks
@@ -16,14 +17,18 @@ class Queue(Static):
 
     def _render(self) -> None:
         if not self.tracks:
-            self.update("Queue is empty. Add tracks to queue to see them here.")
+            new_content = "Queue is empty. Add tracks to queue to see them here."
         else:
             lines = []
             for i, track in enumerate(self.tracks):
                 prefix = "> " if i == self.selected_index else "  "
                 duration = self._format_duration(track.duration)
                 lines.append(f"{prefix}{track.display_name} [{duration}]")
-            self.update("\n".join(lines))
+            new_content = "\n".join(lines)
+
+        self.update(new_content)
+        self._last_rendered_content = new_content
+        self.refresh()
 
     def _format_duration(self, seconds: float) -> str:
         minutes = int(seconds // 60)
@@ -38,6 +43,16 @@ class Queue(Static):
     def move_down(self) -> None:
         if self.tracks:
             self.selected_index = (self.selected_index + 1) % len(self.tracks)
+            self._render()
+
+    def page_up(self) -> None:
+        if self.tracks:
+            self.selected_index = max(0, self.selected_index - 20)
+            self._render()
+
+    def page_down(self) -> None:
+        if self.tracks:
+            self.selected_index = min(len(self.tracks) - 1, self.selected_index + 20)
             self._render()
 
     def get_selected_track(self) -> Optional[Track]:
