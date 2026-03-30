@@ -19,21 +19,18 @@ class TrackList(Static):
     def set_load_more_callback(self, callback: Callable[[], None]) -> None:
         self._load_more_callback = callback
 
-    def _render(self) -> None:
+    def _render_content(self) -> None:
         if not self.tracks:
             new_content = "No tracks in library. Use :scan <path> to add music."
         else:
             lines = []
             for i, track in enumerate(self.tracks):
                 prefix = "> " if i == self.selected_index else "  "
-                # Prepend index to each track for easier debugging
                 lines.append(f"{i + 1}. {prefix}{track.display_name}")
             new_content = "\n".join(lines)
 
         self._last_rendered_content = new_content
         self.update(new_content)
-        self.refresh()
-        # Use call_later to scroll AFTER the content is rendered (Textual PR #1902)
         self.call_later(self.scroll_to_selection)
 
     def scroll_to_selection(self) -> None:
@@ -64,7 +61,7 @@ class TrackList(Static):
             self.selected_index = max_index
         self._track_offset = 0
         self.total_count = total_count
-        self._render()
+        self._render_content()
 
     def _force_render(self) -> None:
         if not self.tracks:
@@ -78,7 +75,6 @@ class TrackList(Static):
 
         self._last_rendered_content = new_content
         self.update(new_content)
-        self.refresh()
         self.call_later(self.scroll_to_selection)
 
     def load_more(self) -> None:
@@ -88,7 +84,7 @@ class TrackList(Static):
     def append_tracks(self, tracks: list[Track]) -> None:
         self.tracks.extend(tracks)
         self._track_offset = len(self.tracks)
-        self._render()
+        self._render_content()
         # Use call_later to scroll AFTER the content is rendered
         # This handles scenarios where the selected item was outside the
         # current viewport and the list needs to scroll to bring it into view.

@@ -237,15 +237,13 @@ def test_append_tracks_scrolls_to_selection_when_out_of_view():
     ]
 
     with (
-        patch.object(tl, "refresh") as mock_refresh,
         patch.object(tl, "call_later") as mock_call_later,
         patch.object(tl, "update") as mock_update,
     ):
         tl.append_tracks(new_tracks)
-        mock_refresh.assert_called()
         mock_update.assert_called()
         # Expect call_later to be invoked to schedule scroll AFTER rendering
-        # (called from _render and then from append_tracks)
+        # (called from _render_content and then from append_tracks)
         assert mock_call_later.called
         # Verify scroll_to_selection is one of the callbacks passed to call_later
         call_args_list = [args[0] for args, _ in mock_call_later.call_args_list]

@@ -21,7 +21,7 @@ class Search(Static):
     def set_results(self, tracks: list[Track]) -> None:
         self.results = tracks
         self.selected_index = 0
-        self._render()
+        self._render_content()
 
     def append_char(self, char: str) -> None:
         self.query += char
@@ -34,13 +34,13 @@ class Search(Static):
                 self.execute_search()
             else:
                 self.results = []
-                self._render()
+                self._render_content()
 
     def execute_search(self) -> None:
         if self._library and self.query.strip():
             self.results = self._library.search(self.query)
             self.selected_index = 0
-            self._render()
+            self._render_content()
 
     def perform_search(self, query: str, library: "Library") -> None:
         self.query = query
@@ -49,9 +49,9 @@ class Search(Static):
         else:
             self.results = []
         self.selected_index = 0
-        self._render()
+        self._render_content()
 
-    def _render(self) -> None:
+    def _render_content(self) -> None:
         if not self.query:
             new_content = "Search: (type to search)\n"
         elif not self.results:
@@ -66,27 +66,26 @@ class Search(Static):
 
         self.update(new_content)
         self._last_rendered_content = new_content
-        self.refresh()
 
     def move_up(self) -> None:
         if self.results:
             self.selected_index = (self.selected_index - 1) % len(self.results)
-            self._render()
+            self._render_content()
 
     def move_down(self) -> None:
         if self.results:
             self.selected_index = (self.selected_index + 1) % len(self.results)
-            self._render()
+            self._render_content()
 
     def page_up(self) -> None:
         if self.results:
             self.selected_index = max(0, self.selected_index - 20)
-            self._render()
+            self._render_content()
 
     def page_down(self) -> None:
         if self.results:
             self.selected_index = min(len(self.results) - 1, self.selected_index + 20)
-            self._render()
+            self._render_content()
 
     def get_selected_track(self) -> Optional[Track]:
         if 0 <= self.selected_index < len(self.results):
@@ -97,4 +96,4 @@ class Search(Static):
         self.query = ""
         self.results = []
         self.selected_index = 0
-        self._render()
+        self._render_content()

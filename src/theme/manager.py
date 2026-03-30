@@ -11,13 +11,13 @@ class ThemeManager:
         self._themes[theme.name] = theme
 
     def load(self, name: str) -> bool:
-        if name in self._themes:
+        return name in self._themes
+
+    def set_theme(self, name: str) -> bool:
+        if self.load(name):
             self._current_theme = self._themes[name]
             return True
         return False
-
-    def set_theme(self, name: str) -> bool:
-        return self.load(name)
 
     @property
     def current(self) -> Optional[ThemeProtocol]:
