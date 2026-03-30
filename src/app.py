@@ -8,6 +8,7 @@ from src.library import Library
 from src.ui.widgets.player_bar import PlayerBar
 from src.ui.widgets.track_table import TrackTable
 from src.ui.widgets.sidebar import Sidebar
+from src.ui.widgets.context_menu import TrackContextMenu
 from src.ui.settings import Settings
 from src.ui.search import Search
 from src.ui.status_bar import StatusBar
@@ -25,8 +26,11 @@ class MusicTUI(App):
         width: 100%;
         height: 100%;
     }
-    #sidebar {
+    #sidebar-container {
         width: 20;
+    }
+    #sidebar {
+        width: 100%;
         dock: left;
         border: solid $primary;
     }
@@ -176,9 +180,9 @@ class MusicTUI(App):
     def compose(self):
         with Container(id="main-container"):
             with Horizontal():
-                with Vertical(width=20):
+                with Vertical(id="sidebar-container"):
                     yield Sidebar(id="sidebar")
-                with Vertical():
+                with Vertical(id="main-content"):
                     yield TrackTable(id="track-table")
             yield Settings(id="settings")
             yield Search(id="search")
@@ -199,6 +203,35 @@ class MusicTUI(App):
         self._init_views()
         self._init_player()
         self._load_library()
+
+    def on_track_table_track_selected(self, event) -> None:
+        if event.track:
+            self.push_screen(TrackContextMenu(event.track), self._handle_menu_action)
+
+    def on_sidebar_item_clicked(self, event) -> None:
+        """侧边栏项目点击"""
+        if event.item == "Library":
+            self.action_show_library()
+        elif event.item == "Queue":
+            self.action_show_queue()
+        elif event.item == "Search":
+            self.action_show_search()
+        elif event.item == "Favorites":
+            self.action_show_favorites()
+        elif event.item == "Settings":
+            self.action_show_settings()
+
+    def _handle_menu_action(self, result) -> None:
+        if result.action == "play":
+            self.player.play(result.track)
+        elif result.action == "queue":
+            self.player.add_to_queue(result.track)
+        elif result.action == "next":
+            self.player.add_to_queue_front(result.track)
+        elif result.action == "favorite":
+            self.library.add_favorite(result.track.id)
+        elif result.action == "blacklist":
+            self.library.add_to_blacklist(result.track.id)
 
     def _init_views(self) -> None:
         settings = self.query_one("#settings", Settings)

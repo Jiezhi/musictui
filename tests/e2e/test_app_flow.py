@@ -11,7 +11,7 @@ async def test_app_startup():
     async with app.run_test() as pilot:
         # Verify all main components exist
         assert app.query_one("#sidebar") is not None
-        assert app.query_one("#track-list") is not None
+        assert app.query_one("#track-table") is not None
         assert app.query_one("#player-bar") is not None
         assert app.query_one("#status-bar") is not None
 
@@ -24,24 +24,24 @@ async def test_navigate_tracks():
     app = MusicTUI()
     async with app.run_test() as pilot:
         # Add mock tracks to the library and track list
-        track_list = app.query_one("#track-list")
+        track_list = app.query_one("#track-table")
         track1 = Track(id=1, file_path="/test1.mp3", title="Test1")
         track2 = Track(id=2, file_path="/test2.mp3", title="Test2")
-        track_list.set_tracks([track1, track2], 2)
+        track_list.set_tracks([track1, track2])
 
-        initial_index = track_list.selected_index
+        initial_index = track_list.get_selected_index()
 
         # Press j to move down
         await pilot.press("j")
         await pilot.pause()
 
-        assert track_list.selected_index == initial_index + 1
+        assert track_list.get_selected_index() == initial_index + 1
 
         # Press k to move up
         await pilot.press("k")
         await pilot.pause()
 
-        assert track_list.selected_index == initial_index
+        assert track_list.get_selected_index() == initial_index
 
 
 @pytest.mark.asyncio

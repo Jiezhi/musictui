@@ -66,12 +66,12 @@ class TrackTable(DataTable):
     def move_up(self) -> None:
         """上移选择"""
         if self.cursor_row > 0:
-            self.cursor_coordinate = (self.cursor_row - 1, self.cursor_column)
+            self.move_cursor(row=self.cursor_row - 1)
 
     def move_down(self) -> None:
         """下移选择"""
         if self.cursor_row < len(self.tracks) - 1:
-            self.cursor_coordinate = (self.cursor_row + 1, self.cursor_column)
+            self.move_cursor(row=self.cursor_row + 1)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """行选中事件"""

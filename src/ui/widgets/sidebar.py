@@ -25,8 +25,9 @@ class Sidebar(ListView):
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """列表项选中事件"""
+        self._selected_index = event.item_index
         self.post_message(
-            self.ItemClicked(self.items[event.list_view.index], event.list_view.index)
+            self.ItemClicked(self.items[event.item_index], event.item_index)
         )
 
     def get_selected(self) -> str:

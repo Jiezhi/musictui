@@ -37,7 +37,7 @@ async def test_show_search_keybinding():
         search = app.query_one("#search")
         assert search.styles.display == "block"
 
-        track_list = app.query_one("#track-list")
+        track_list = app.query_one("#track-table")
         assert track_list.styles.display == "none"
 
 

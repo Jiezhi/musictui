@@ -48,14 +48,18 @@ class TestTrackTable:
         async with app.run_test() as pilot:
             table = TrackTable()
             app.mount(table)
+            table.focus()
             await pilot.pause()
             tracks = [
                 Track(id=1, title="Song 1", file_path="/a.mp3"),
                 Track(id=2, title="Song 2", file_path="/b.mp3"),
             ]
             table.set_tracks(tracks)
+            await pilot.pause()
             table.cursor_coordinate = (1, 0)
+            await pilot.pause()
             table.move_up()
+            await pilot.pause()
             assert table.cursor_row == 0
 
     @pytest.mark.asyncio
@@ -64,13 +68,16 @@ class TestTrackTable:
         async with app.run_test() as pilot:
             table = TrackTable()
             app.mount(table)
+            table.focus()
             await pilot.pause()
             tracks = [
                 Track(id=1, title="Song 1", file_path="/a.mp3"),
                 Track(id=2, title="Song 2", file_path="/b.mp3"),
             ]
             table.set_tracks(tracks)
+            await pilot.pause()
             table.move_down()
+            await pilot.pause()
             assert table.cursor_row == 1
 
     @pytest.mark.asyncio
