@@ -1,13 +1,13 @@
 import os
 from textual.app import App
 from textual.binding import Binding
-from textual.containers import Container
+from textual.containers import Container, Horizontal, Vertical
 from src.config import get_config, save_config
 from src.player import Player
 from src.library import Library
-from src.ui.player_bar import PlayerBar
-from src.ui.track_list import TrackList
-from src.ui.sidebar import Sidebar
+from src.ui.widgets.player_bar import PlayerBar
+from src.ui.widgets.track_table import TrackTable
+from src.ui.widgets.sidebar import Sidebar
 from src.ui.settings import Settings
 from src.ui.search import Search
 from src.ui.status_bar import StatusBar
@@ -30,10 +30,9 @@ class MusicTUI(App):
         dock: left;
         border: solid $primary;
     }
-    #track-list {
+    #track-table {
         width: 1fr;
         height: 100%;
-        overflow-y: auto;
     }
     #player-bar {
         height: 3;
@@ -45,27 +44,14 @@ class MusicTUI(App):
         dock: bottom;
         background: $accent;
     }
-    #queue {
+    #queue, #search, #settings {
         width: 1fr;
         height: 100%;
-        overflow-y: auto;
     }
     #command-input {
         dock: bottom;
         height: 1;
         background: $accent;
-        color: $text;
-        padding: 0 1;
-    }
-    #search {
-        width: 1fr;
-        height: 100%;
-        overflow-y: auto;
-    }
-    #settings {
-        width: 1fr;
-        height: 100%;
-        overflow-y: auto;
     }
     """
 
@@ -189,48 +175,17 @@ class MusicTUI(App):
 
     def compose(self):
         with Container(id="main-container"):
-            yield Sidebar(id="sidebar")
-            yield TrackList(id="track-list")
+            with Horizontal():
+                with Vertical(width=20):
+                    yield Sidebar(id="sidebar")
+                with Vertical():
+                    yield TrackTable(id="track-table")
             yield Settings(id="settings")
             yield Search(id="search")
             yield Queue(id="queue")
             yield CommandInput(id="command-input")
             yield PlayerBar(id="player-bar")
             yield StatusBar(id="status-bar")
-
-    def _on_track_change(self, track):
-        self.call_later(self._update_player_bar)
-        if not hasattr(self, "_position_timer"):
-            self._position_timer = self.set_interval(
-                0.5, self._update_playback_position
-            )
-
-    def _on_state_change(self, state):
-        self.call_later(self._update_player_bar)
-        if state == PlayerState.STOPPED:
-            if hasattr(self, "_position_timer"):
-                self._position_timer.stop()
-
-    def _update_playback_position(self):
-        if self.player.state == PlayerState.PLAYING and self.player._current_sound:
-            try:
-                current_pos = self.player._current_sound.get_pos() / 1000.0
-                self._update_player_bar(current_pos)
-            except Exception:
-                pass
-
-    def _update_player_bar(self, current_time: float = 0.0):
-        try:
-            player_bar = self.query_one("#player-bar", PlayerBar)
-            current = self.player.get_current_track()
-            if current:
-                player_bar.update_track(
-                    current.title, current.artist, current_time, current.duration
-                )
-            else:
-                player_bar.update_track("No track", "", 0.0, 0.0)
-        except Exception:
-            pass
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -241,6 +196,11 @@ class MusicTUI(App):
         self.player = Player()
         self.library = Library(os.path.expanduser("~/.musictui/music.db"))
 
+        self._init_views()
+        self._init_player()
+        self._load_library()
+
+    def _init_views(self) -> None:
         settings = self.query_one("#settings", Settings)
         settings.values["Volume"] = self.config.player.volume
         settings.values["Play Mode"] = self.config.player.play_mode
@@ -262,6 +222,14 @@ class MusicTUI(App):
         self._add_search_key_bindings()
         self._add_command_key_bindings()
 
+    def _init_player(self) -> None:
+        self.player.set_volume(self.config.player.volume)
+        if self.config.player.play_mode == "shuffle":
+            self.player.set_play_mode(PlayMode.SHUFFLE)
+        self.player.set_on_track_change(self._on_track_change)
+        self.player.set_on_state_change(self._on_state_change)
+
+    def _load_library(self) -> None:
         self.total_tracks = self.library.get_total_count()
         if self.total_tracks == 0:
             for path in self.config.library_paths:
@@ -270,42 +238,50 @@ class MusicTUI(App):
             self.total_tracks = self.library.get_total_count()
 
         self.tracks = self.library.get_all_tracks(limit=50)
+        self._update_track_table()
 
-        self.player.set_volume(self.config.player.volume)
-        if self.config.player.play_mode == "shuffle":
-            self.player.set_play_mode(PlayMode.SHUFFLE)
-
-        self.player.set_on_track_change(self._on_track_change)
-        self.player.set_on_state_change(self._on_state_change)
-
-        self._load_library()
-
-    def _load_library(self):
+    def _update_track_table(self) -> None:
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.set_tracks(self.tracks, self.total_tracks)
-            # Attempt an immediate scroll to ensure the selected item is visible
-            try:
-                track_list.scroll_to_selection()
-            except Exception:
-                pass
-            track_list.set_load_more_callback(self._load_more_tracks)
-            # Ensure the initial selection is visible after the first render
-            # Allow layout to complete before scrolling
-            self.call_later(lambda: track_list.scroll_to_selection())
+            track_table = self.query_one("#track-table", TrackTable)
+            track_table.set_tracks(self.tracks)
+            self.call_later(lambda: track_table.focus())
         except Exception as e:
             print(f"Error: {e}")
-            self.set_timer(0.1, self._load_library)
+            self.set_timer(0.1, self._update_track_table)
 
-    def _load_more_tracks(self):
-        new_tracks = self.library.get_all_tracks(offset=len(self.tracks), limit=50)
-        if new_tracks:
-            self.tracks.extend(new_tracks)
+    def _on_track_change(self, track) -> None:
+        self.call_later(self._update_player_bar)
+        if not hasattr(self, "_position_timer"):
+            self._position_timer = self.set_interval(
+                0.5, self._update_playback_position
+            )
+
+    def _on_state_change(self, state) -> None:
+        self.call_later(self._update_player_bar)
+        if state == PlayerState.STOPPED:
+            if hasattr(self, "_position_timer"):
+                self._position_timer.stop()
+
+    def _update_playback_position(self) -> None:
+        if self.player.state == PlayerState.PLAYING and self.player._current_sound:
             try:
-                track_list = self.query_one("#track-list", TrackList)
-                track_list.append_tracks(new_tracks)
+                current_pos = self.player._current_sound.get_pos() / 1000.0
+                self._update_player_bar(current_pos)
             except Exception:
                 pass
+
+    def _update_player_bar(self, current_time: float = 0.0) -> None:
+        try:
+            player_bar = self.query_one("#player-bar", PlayerBar)
+            current = self.player.get_current_track()
+            if current:
+                player_bar.update_track(
+                    current.title, current.artist, current_time, current.duration
+                )
+            else:
+                player_bar.update_track("No track", "", 0.0, 0.0)
+        except Exception:
+            pass
 
     def action_play_pause(self) -> None:
         if self.player.state == PlayerState.PLAYING:
@@ -313,8 +289,8 @@ class MusicTUI(App):
         elif self.player.state == PlayerState.PAUSED:
             self.player.resume()
         else:
-            track_list = self.query_one("#track-list", TrackList)
-            track = track_list.get_selected_track()
+            track_table = self.query_one("#track-table", TrackTable)
+            track = track_table.get_selected_track()
             if track:
                 self.player.play(track)
 
@@ -340,8 +316,8 @@ class MusicTUI(App):
                 queue = self.query_one("#queue", Queue)
                 queue.move_down()
             else:
-                track_list = self.query_one("#track-list", TrackList)
-                track_list.move_down()
+                track_table = self.query_one("#track-table", TrackTable)
+                track_table.move_down()
         except Exception:
             pass
 
@@ -357,8 +333,8 @@ class MusicTUI(App):
                 queue = self.query_one("#queue", Queue)
                 queue.move_up()
             else:
-                track_list = self.query_one("#track-list", TrackList)
-                track_list.move_up()
+                track_table = self.query_one("#track-table", TrackTable)
+                track_table.move_up()
         except Exception:
             pass
 
@@ -376,8 +352,8 @@ class MusicTUI(App):
                 if track:
                     self.player.play(track)
             else:
-                track_list = self.query_one("#track-list", TrackList)
-                track = track_list.get_selected_track()
+                track_table = self.query_one("#track-table", TrackTable)
+                track = track_table.get_selected_track()
                 if track:
                     self.player.play(track)
         except Exception:
@@ -436,13 +412,6 @@ class MusicTUI(App):
             save_config(self.config)
         except Exception:
             pass
-
-    def action_scan(self, path: str) -> None:
-        tracks = self.library.scan_local(path)
-        self.total_tracks = self.library.get_total_count()
-        self.tracks = self.library.get_all_tracks(limit=50)
-        track_list = self.query_one("#track-list", TrackList)
-        track_list.set_tracks(self.tracks, self.total_tracks)
 
     def _add_search_key_bindings(self) -> None:
         for key in self.SEARCH_KEYS:
@@ -549,8 +518,7 @@ class MusicTUI(App):
             count = self.library.save_remote_tracks(tracks)
             self.total_tracks = self.library.get_total_count()
             self.tracks = self.library.get_all_tracks(limit=50)
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.set_tracks(self.tracks, self.total_tracks)
+            self._update_track_table()
             self._show_status_message(f"Added {count} songs from {url}")
         except ValueError as e:
             self._show_status_message(f"Error: {str(e)}")
@@ -570,75 +538,58 @@ class MusicTUI(App):
         tracks = self.library.scan_local(path)
         self.total_tracks = self.library.get_total_count()
         self.tracks = self.library.get_all_tracks(limit=50)
-        track_list = self.query_one("#track-list", TrackList)
-        track_list.set_tracks(self.tracks, self.total_tracks)
+        self._update_track_table()
         self._show_status_message(f"Scanned {len(tracks)} songs from {path}")
 
     def action_show_library(self) -> None:
         self.current_view = "library"
         try:
-            # Refresh library data when showing library view
             self.total_tracks = self.library.get_total_count()
             self.tracks = self.library.get_all_tracks(limit=50)
-
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.set_tracks(self.tracks, self.total_tracks)
-            track_list.styles.display = "block"
-            settings = self.query_one("#settings", Settings)
-            settings.styles.display = "none"
-            search = self.query_one("#search", Search)
-            search.styles.display = "none"
+            self._update_track_table()
+            self._hide_other_views("#track-table")
             sidebar = self.query_one("#sidebar", Sidebar)
-            sidebar.selected = 0
-            sidebar._update_content()
+            sidebar.set_selected(0)
         except Exception:
             pass
 
     def action_show_queue(self) -> None:
         self.current_view = "queue"
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.styles.display = "none"
-            settings = self.query_one("#settings", Settings)
-            settings.styles.display = "none"
-            search = self.query_one("#search", Search)
-            search.styles.display = "none"
+            self._hide_other_views("#queue")
             queue = self.query_one("#queue", Queue)
             queue.set_tracks(self.player.queue)
-            queue.styles.display = "block"
             sidebar = self.query_one("#sidebar", Sidebar)
-            sidebar.selected = 1
-            sidebar._update_content()
+            sidebar.set_selected(1)
         except Exception:
             pass
 
     def action_show_search(self) -> None:
         self.current_view = "search"
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.styles.display = "none"
-            settings = self.query_one("#settings", Settings)
-            settings.styles.display = "none"
-            search = self.query_one("#search", Search)
-            search.styles.display = "block"
+            self._hide_other_views("#search")
             sidebar = self.query_one("#sidebar", Sidebar)
-            sidebar.selected = 2
-            sidebar._update_content()
+            sidebar.set_selected(2)
         except Exception:
             pass
 
     def action_show_settings(self) -> None:
         self.current_view = "settings"
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track_list.styles.display = "none"
-            settings = self.query_one("#settings", Settings)
-            settings.styles.display = "block"
+            self._hide_other_views("#settings")
             sidebar = self.query_one("#sidebar", Sidebar)
-            sidebar.selected = 4
-            sidebar._update_content()
+            sidebar.set_selected(4)
         except Exception:
             pass
+
+    def _hide_other_views(self, show_id: str) -> None:
+        views = ["#track-table", "#settings", "#search", "#queue"]
+        for vid in views:
+            try:
+                view = self.query_one(vid)
+                view.styles.display = "block" if vid == show_id else "none"
+            except Exception:
+                pass
 
     def action_sidebar_up(self) -> None:
         try:
@@ -682,8 +633,8 @@ class MusicTUI(App):
 
     def action_add_favorite(self) -> None:
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track = track_list.get_selected_track()
+            track_table = self.query_one("#track-table", TrackTable)
+            track = track_table.get_selected_track()
             if track and track.id:
                 if self.library.add_favorite(track.id):
                     self._show_status_message(
@@ -714,8 +665,8 @@ class MusicTUI(App):
 
     def action_remove_favorite(self) -> None:
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track = track_list.get_selected_track()
+            track_table = self.query_one("#track-table", TrackTable)
+            track = track_table.get_selected_track()
             if track and track.id:
                 if self.library.remove_favorite(track.id):
                     self._show_status_message(
@@ -728,8 +679,8 @@ class MusicTUI(App):
 
     def action_add_to_blacklist(self) -> None:
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            track = track_list.get_selected_track()
+            track_table = self.query_one("#track-table", TrackTable)
+            track = track_table.get_selected_track()
             if track and track.id:
                 if self.library.add_to_blacklist(track.id):
                     self._show_status_message(
@@ -760,8 +711,8 @@ class MusicTUI(App):
                 queue = self.query_one("#queue", Queue)
                 queue.page_up()
             else:
-                track_list = self.query_one("#track-list", TrackList)
-                track_list.page_up()
+                track_table = self.query_one("#track-table", TrackTable)
+                track_table.move_up()
         except Exception:
             pass
 
@@ -778,24 +729,19 @@ class MusicTUI(App):
                 queue = self.query_one("#queue", Queue)
                 queue.page_down()
             else:
-                track_list = self.query_one("#track-list", TrackList)
-                track_list.page_down()
+                track_table = self.query_one("#track-table", TrackTable)
+                track_table.move_down()
         except Exception:
             pass
 
     def action_show_favorites(self) -> None:
         self.current_view = "favorites"
         try:
-            track_list = self.query_one("#track-list", TrackList)
-            settings = self.query_one("#settings", Settings)
-            settings.styles.display = "none"
-            search = self.query_one("#search", Search)
-            search.styles.display = "none"
+            self._hide_other_views("#track-table")
             favorites = self.library.get_favorites()
-            track_list.set_tracks(favorites, len(favorites))
-            track_list.styles.display = "block"
+            track_table = self.query_one("#track-table", TrackTable)
+            track_table.set_tracks(favorites)
             sidebar = self.query_one("#sidebar", Sidebar)
-            sidebar.selected = 3
-            sidebar._update_content()
+            sidebar.set_selected(3)
         except Exception:
             pass
