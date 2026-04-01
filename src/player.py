@@ -36,11 +36,21 @@ class Player:
 
     def play(self, track: Optional[Track] = None) -> None:
         if track:
-            self.add_to_queue(track)
-            self.current_index = len(self.queue) - 1
+            # Check if track already in queue
+            for i, t in enumerate(self.queue):
+                if t.id == track.id:
+                    self.current_index = i
+                    break
+            else:
+                # Track not in queue, add it
+                self.add_to_queue(track)
+                self.current_index = len(self.queue) - 1
 
         if self.current_index < 0 or self.current_index >= len(self.queue):
-            return
+            if self.queue:
+                self.current_index = 0
+            else:
+                return
 
         self._load_and_play(self.queue[self.current_index])
 

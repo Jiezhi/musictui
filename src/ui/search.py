@@ -42,6 +42,17 @@ class Search(Static):
             self.selected_index = 0
             self._render_content()
 
+    def search(self, query: str) -> None:
+        """Search for tracks with the given query"""
+        if self._library:
+            self.query = query
+            if query.strip():
+                self.results = self._library.search(query)
+            else:
+                self.results = []
+            self.selected_index = 0
+            self._render_content()
+
     def perform_search(self, query: str, library: "Library") -> None:
         self.query = query
         if query.strip():

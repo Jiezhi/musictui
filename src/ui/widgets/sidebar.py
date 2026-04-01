@@ -41,6 +41,11 @@ class Sidebar(ListView):
         """获取选中索引"""
         return self._selected_index
 
+    @property
+    def selected(self) -> int:
+        """Get selected index"""
+        return self._selected_index
+
     def set_selected(self, index: int) -> None:
         """设置选中项"""
         if 0 <= index < len(self.items):
