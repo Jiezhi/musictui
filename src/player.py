@@ -48,9 +48,9 @@ class Player:
         try:
             if self._current_sound:
                 self._current_sound.stop()
-            self._current_sound = pygame.mixer.Sound(track.file_path)
-            self._current_sound.set_volume(self.volume)
-            self._current_sound.play()
+            pygame.mixer.music.load(track.file_path)
+            pygame.mixer.music.set_volume(self.volume)
+            pygame.mixer.music.play()
             self.state = PlayerState.PLAYING
             if self._on_track_change:
                 self._on_track_change(track)
@@ -106,8 +106,7 @@ class Player:
 
     def set_volume(self, volume: float) -> None:
         self.volume = max(0.0, min(1.0, volume))
-        if self._current_sound:
-            self._current_sound.set_volume(self.volume)
+        pygame.mixer.music.set_volume(self.volume)
 
     def set_play_mode(self, mode: PlayMode) -> None:
         self.play_mode = mode

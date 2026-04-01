@@ -26,7 +26,7 @@ class TrackTable(DataTable):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
         self.tracks: list[Track] = []
-        self.cursor_type = "none"
+        self.cursor_type = "row"
 
     def on_mount(self) -> None:
         self.add_columns("#", "Title", "Artist", "Album", "Duration")

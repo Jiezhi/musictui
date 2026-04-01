@@ -1,4 +1,5 @@
 import os
+import pygame
 from textual.app import App
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
@@ -56,6 +57,7 @@ class MusicTUI(App):
         dock: bottom;
         height: 1;
         background: $accent;
+        layer: command;
     }
     """
 
@@ -296,9 +298,9 @@ class MusicTUI(App):
                 self._position_timer.stop()
 
     def _update_playback_position(self) -> None:
-        if self.player.state == PlayerState.PLAYING and self.player._current_sound:
+        if self.player.state == PlayerState.PLAYING:
             try:
-                current_pos = self.player._current_sound.get_pos() / 1000.0
+                current_pos = pygame.mixer.music.get_pos() / 1000.0
                 self._update_player_bar(current_pos)
             except Exception:
                 pass
@@ -690,6 +692,7 @@ class MusicTUI(App):
             command_input = self.query_one("#command-input", CommandInput)
             command_input.set_command(initial_text)
             command_input.styles.display = "block"
+            self.call_later(lambda: command_input.focus())
         except Exception:
             pass
 
