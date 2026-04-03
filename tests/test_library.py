@@ -148,3 +148,26 @@ def test_library_search_by_initials(tmp_path):
     results = library.search("wd")
     assert len(results) == 1
     assert "我的" in results[0].title
+
+
+def test_library_scan_local_with_single_file(tmp_path):
+    db_path = tmp_path / "test.db"
+    library = Library(str(db_path))
+
+    song_file = tmp_path / "single.mp3"
+    song_file.write_bytes(b"not-real-audio")
+
+    tracks = library.scan_local(str(song_file))
+
+    assert len(tracks) == 1
+    assert tracks[0].file_path == str(song_file)
+
+
+def test_library_scan_local_with_missing_path(tmp_path):
+    db_path = tmp_path / "test.db"
+    library = Library(str(db_path))
+
+    missing = tmp_path / "missing-dir"
+    tracks = library.scan_local(str(missing))
+
+    assert tracks == []
