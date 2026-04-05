@@ -281,20 +281,20 @@ class MusicTUI(App):
         try:
             track_table = self.query_one("#track-table", TrackTable)
             track_table.set_tracks(self.tracks)
-            self.call_later(lambda: track_table.focus())
+            self.set_timer(0, lambda: track_table.focus())
         except Exception as e:
             print(f"Error: {e}")
             self.set_timer(0.1, self._update_track_table)
 
     def _on_track_change(self, track) -> None:
-        self.call_later(self._update_player_bar)
+        self.set_timer(0, self._update_player_bar)
         if not hasattr(self, "_position_timer"):
             self._position_timer = self.set_interval(
                 0.5, self._update_playback_position
             )
 
     def _on_state_change(self, state) -> None:
-        self.call_later(self._update_player_bar)
+        self.set_timer(0, self._update_player_bar)
         if state == PlayerState.STOPPED:
             if hasattr(self, "_position_timer"):
                 self._position_timer.stop()
@@ -749,7 +749,7 @@ class MusicTUI(App):
             command_input = self.query_one("#command-input", CommandInput)
             command_input.set_command(initial_text)
             command_input.styles.display = "block"
-            self.call_later(lambda: command_input.focus())
+            self.set_timer(0, lambda: command_input.focus())
         except Exception:
             pass
 

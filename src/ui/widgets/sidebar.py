@@ -20,15 +20,14 @@ class Sidebar(ListView):
 
     def on_mount(self) -> None:
         for item in self.items:
-            self.append(ListItem(Static(item)))
-        self.index = self._selected_index
+            self.mount(ListItem(Static(item)))
+        self.highlighted = self._selected_index
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         """列表项选中事件"""
-        self._selected_index = event.item_index
-        self.post_message(
-            self.ItemClicked(self.items[event.item_index], event.item_index)
-        )
+        self._selected_index = event.list_view.index
+        idx = event.list_view.index
+        self.post_message(self.ItemClicked(self.items[idx], idx))
 
     def get_selected(self) -> str:
         """获取选中的项目"""
@@ -50,4 +49,4 @@ class Sidebar(ListView):
         """设置选中项"""
         if 0 <= index < len(self.items):
             self._selected_index = index
-            self.index = index
+            self.highlighted = index
