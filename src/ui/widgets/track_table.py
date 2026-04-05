@@ -29,7 +29,11 @@ class TrackTable(DataTable):
         self.cursor_type = "row"
 
     def on_mount(self) -> None:
-        self.add_columns("#", "Title", "Artist", "Album", "Duration")
+        self.add_column("#", width=5)
+        self.add_column("Title", width=25)
+        self.add_column("Artist", width=20)
+        self.add_column("Album", width=20)
+        self.add_column("Duration", width=10)
 
     def set_tracks(self, tracks: list[Track]) -> None:
         """设置曲目列表"""
@@ -46,7 +50,7 @@ class TrackTable(DataTable):
                 key=str(track.id),
             )
         if tracks:
-            self.call_later(lambda: setattr(self, "cursor_coordinate", (0, 0)))
+            self.set_timer(0, lambda: self.cursor_move(row=0, column=0))
 
     def _format_duration(self, seconds: float) -> str:
         minutes = int(seconds // 60)
@@ -66,19 +70,19 @@ class TrackTable(DataTable):
     def move_up(self) -> None:
         """上移选择"""
         if self.cursor_row > 0:
-            self.move_cursor(row=self.cursor_row - 1)
+            self.cursor_move(row=self.cursor_row - 1)
 
     def move_down(self) -> None:
         """下移选择"""
         if self.cursor_row < len(self.tracks) - 1:
-            self.move_cursor(row=self.cursor_row + 1)
+            self.cursor_move(row=self.cursor_row + 1)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """行选中事件"""
         track = self.get_selected_track()
         self.post_message(self.TrackSelected(track, self.cursor_row))
 
-    def on_data_table_row_double_clicked(self, event: DataTable.RowSelected) -> None:
+    def on_data_table_row_activated(self, event: Any) -> None:
         """行双击事件"""
         track = self.get_selected_track()
         self.post_message(self.TrackDoubleClicked(track, self.cursor_row))

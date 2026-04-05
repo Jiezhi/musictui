@@ -1,5 +1,7 @@
 """End-to-end tests for command input mode"""
 
+from unittest.mock import patch
+
 import pytest
 from src.models import Track
 
@@ -54,25 +56,17 @@ async def test_type_command():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
-        # Enter command mode
+
         await pilot.press(":")
         await pilot.pause()
-        await pilot.pause()  # Extra pause for command mode to activate
-        
-        # Type "scan" - each character triggers command_input_<char> action
-        await pilot.press("s")
         await pilot.pause()
-        await pilot.press("c")
-        await pilot.pause()
-        await pilot.press("a")
-        await pilot.pause()
-        await pilot.press("n")
-        await pilot.pause()
-        
+
+        for char in "scan /tmp":
+            await pilot.press(char)
+            await pilot.pause()
+
         command_input = app.query_one("#command-input")
-        # Command should contain the typed characters
-        assert "scan" in command_input.get_command() or command_input.get_command() != ""
+        assert command_input.get_command() == "scan /tmp"
 
 
 @pytest.mark.asyncio
@@ -163,32 +157,28 @@ async def test_command_mode_with_scan():
     """Test scan command in command mode"""
     from src.app import MusicTUI
     import tempfile
-    import os
 
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
-        # Create a temp directory to scan
+
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Enter command mode
             await pilot.press(":")
             await pilot.pause()
-            
-            # Type "scan "
-            for char in "scan ":
-                await pilot.press(char)
-                await pilot.pause()
-            
-            # Type the path
-            for char in tmpdir:
-                await pilot.press(char)
-                await pilot.pause()
-            
-            # Press Enter to execute
-            await pilot.press("enter")
             await pilot.pause()
-            
-            # Command should have been executed (may show status message)
+
+            for char in f"scan {tmpdir}":
+                await pilot.press(char)
+                await pilot.pause()
+
+            command_input = app.query_one("#command-input")
+            assert command_input.get_command() == f"scan {tmpdir}"
+
+            with patch.object(app.library, "scan_local", return_value=[]) as mock_scan:
+                await pilot.press("enter")
+                await pilot.pause()
+
+            mock_scan.assert_called_once_with(tmpdir)
+
             command_input = app.query_one("#command-input")
             assert command_input.styles.display == "none"

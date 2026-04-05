@@ -1365,8 +1365,19 @@ class Library:
     def scan_local(self, path: str) -> list[Track]:
         music_extensions = {".mp3", ".flac", ".wav", ".ogg", ".m4a", ".wma"}
         tracks = []
+        root = Path(path)
 
-        for file_path in Path(path).rglob("*"):
+        if not root.exists():
+            return tracks
+
+        if root.is_file():
+            if root.suffix.lower() in music_extensions:
+                track = self._extract_metadata(root)
+                self._save_track(track)
+                tracks.append(track)
+            return tracks
+
+        for file_path in root.rglob("*"):
             if file_path.suffix.lower() in music_extensions:
                 track = self._extract_metadata(file_path)
                 self._save_track(track)

@@ -29,4 +29,4 @@ class TrackContextMenu(ModalScreen):
 
     def on_button_pressed(self, event) -> None:
         self.post_message(self.MenuItemSelected(event.button.id, self.track))
-        self.app.pop_screen()
+        self.dismiss()

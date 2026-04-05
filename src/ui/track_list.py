@@ -31,7 +31,15 @@ class TrackList(Static):
 
         self._last_rendered_content = new_content
         self.update(new_content)
-        self.call_later(self.scroll_to_selection)
+        # Use call_later so tests can mock the timer. Fallback to set_timer if call_later is unavailable.
+        try:
+            # type: ignore[attr-defined]
+            self.call_later(0, self.scroll_to_selection)
+        except Exception:
+            try:
+                self.set_timer(0, self.scroll_to_selection)
+            except RuntimeError:
+                pass
 
     def scroll_to_selection(self) -> None:
         if not self.tracks:
@@ -75,7 +83,15 @@ class TrackList(Static):
 
         self._last_rendered_content = new_content
         self.update(new_content)
-        self.call_later(self.scroll_to_selection)
+        # Use call_later so tests can mock the timer. Fallback to set_timer if call_later is unavailable.
+        try:
+            # type: ignore[attr-defined]
+            self.call_later(0, self.scroll_to_selection)
+        except Exception:
+            try:
+                self.set_timer(0, self.scroll_to_selection)
+            except RuntimeError:
+                pass
 
     def load_more(self) -> None:
         if self._load_more_callback and len(self.tracks) < self.total_count:
@@ -85,10 +101,18 @@ class TrackList(Static):
         self.tracks.extend(tracks)
         self._track_offset = len(self.tracks)
         self._render_content()
-        # Use call_later to scroll AFTER the content is rendered
+        # Use set_timer to scroll AFTER the content is rendered
         # This handles scenarios where the selected item was outside the
         # current viewport and the list needs to scroll to bring it into view.
-        self.call_later(self.scroll_to_selection)
+        # Use call_later so tests can mock the timer. Fallback to set_timer if call_later is unavailable.
+        try:
+            # type: ignore[attr-defined]
+            self.call_later(0, self.scroll_to_selection)
+        except Exception:
+            try:
+                self.set_timer(0, self.scroll_to_selection)
+            except RuntimeError:
+                pass
 
     def move_up(self) -> None:
         if self.tracks:

@@ -174,9 +174,11 @@ class MusicTUI(App):
         "9",
         "-",
         "_",
+        " ",
         ".",
         "/",
         ":",
+        "~",
     ]
 
     def compose(self):
@@ -279,20 +281,20 @@ class MusicTUI(App):
         try:
             track_table = self.query_one("#track-table", TrackTable)
             track_table.set_tracks(self.tracks)
-            self.call_later(lambda: track_table.focus())
+            self.set_timer(0, lambda: track_table.focus())
         except Exception as e:
             print(f"Error: {e}")
             self.set_timer(0.1, self._update_track_table)
 
     def _on_track_change(self, track) -> None:
-        self.call_later(self._update_player_bar)
+        self.set_timer(0, self._update_player_bar)
         if not hasattr(self, "_position_timer"):
             self._position_timer = self.set_interval(
                 0.5, self._update_playback_position
             )
 
     def _on_state_change(self, state) -> None:
-        self.call_later(self._update_player_bar)
+        self.set_timer(0, self._update_player_bar)
         if state == PlayerState.STOPPED:
             if hasattr(self, "_position_timer"):
                 self._position_timer.stop()
@@ -319,6 +321,8 @@ class MusicTUI(App):
             pass
 
     def action_play_pause(self) -> None:
+        if self.command_mode:
+            return
         if self.player.state == PlayerState.PLAYING:
             self.player.pause()
         elif self.player.state == PlayerState.PAUSED:
@@ -330,16 +334,24 @@ class MusicTUI(App):
                 self.player.play(track)
 
     def action_next(self) -> None:
+        if self.command_mode:
+            return
         self.player.next()
 
     def action_previous(self) -> None:
+        if self.command_mode:
+            return
         self.player.previous()
 
     def action_quit(self) -> None:
+        if self.command_mode:
+            return
         self.player.stop()
         self.exit()
 
     def action_move_down(self) -> None:
+        if self.command_mode:
+            return
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
@@ -357,6 +369,8 @@ class MusicTUI(App):
             pass
 
     def action_move_up(self) -> None:
+        if self.command_mode:
+            return
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
@@ -425,6 +439,8 @@ class MusicTUI(App):
             save_config(self.config)
 
     def action_volume_up(self) -> None:
+        if self.command_mode:
+            return
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
@@ -437,6 +453,8 @@ class MusicTUI(App):
             pass
 
     def action_volume_down(self) -> None:
+        if self.command_mode:
+            return
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
@@ -467,6 +485,34 @@ class MusicTUI(App):
             f"'{type(self).__name__}' object has no attribute '{name}'"
         )
 
+    def on_key(self, event) -> None:
+        if not self.command_mode:
+            return
+
+        if event.key == "enter":
+            event.stop()
+            self._execute_command()
+            return
+
+        if event.key == "escape":
+            event.stop()
+            self._exit_command_mode()
+            return
+
+        if event.key == "backspace":
+            event.stop()
+            try:
+                command_input = self.query_one("#command-input", CommandInput)
+                command_input.backspace()
+            except Exception:
+                pass
+            return
+
+        if event.is_printable and event.character:
+            event.stop()
+            self._handle_command_input(event.character)
+            return
+
     def _handle_search_input(self, char: str) -> None:
         if self.current_view == "search":
             try:
@@ -484,22 +530,17 @@ class MusicTUI(App):
                 pass
 
     def action_search_backspace(self) -> None:
+        if self.command_mode:
+            return
         if self.current_view == "search":
             try:
                 search = self.query_one("#search", Search)
                 search.backspace()
             except Exception:
                 pass
-        if self.command_mode:
-            try:
-                command_input = self.query_one("#command-input", CommandInput)
-                command_input.backspace()
-            except Exception:
-                pass
 
     def action_clear_search(self) -> None:
         if self.command_mode:
-            self._exit_command_mode()
             return
         if self.current_view == "search":
             try:
@@ -577,6 +618,8 @@ class MusicTUI(App):
         self._show_status_message(f"Scanned {len(tracks)} songs from {path}")
 
     def action_show_library(self) -> None:
+        if self.command_mode:
+            return
         self.current_view = "library"
         try:
             self.total_tracks = self.library.get_total_count()
@@ -589,6 +632,8 @@ class MusicTUI(App):
             pass
 
     def action_show_queue(self) -> None:
+        if self.command_mode:
+            return
         self.current_view = "queue"
         try:
             self._hide_other_views("#queue")
@@ -600,6 +645,8 @@ class MusicTUI(App):
             pass
 
     def action_show_search(self) -> None:
+        if self.command_mode:
+            return
         self.current_view = "search"
         try:
             self._hide_other_views("#search")
@@ -609,6 +656,8 @@ class MusicTUI(App):
             pass
 
     def action_show_settings(self) -> None:
+        if self.command_mode:
+            return
         self.current_view = "settings"
         try:
             self._hide_other_views("#settings")
@@ -627,6 +676,8 @@ class MusicTUI(App):
                 pass
 
     def action_sidebar_up(self) -> None:
+        if self.command_mode:
+            return
         try:
             sidebar = self.query_one("#sidebar", Sidebar)
             sidebar.move_up()
@@ -635,6 +686,8 @@ class MusicTUI(App):
             pass
 
     def action_sidebar_down(self) -> None:
+        if self.command_mode:
+            return
         try:
             sidebar = self.query_one("#sidebar", Sidebar)
             sidebar.move_down()
@@ -667,6 +720,8 @@ class MusicTUI(App):
             pass
 
     def action_add_favorite(self) -> None:
+        if self.command_mode:
+            return
         try:
             track_table = self.query_one("#track-table", TrackTable)
             track = track_table.get_selected_track()
@@ -683,6 +738,8 @@ class MusicTUI(App):
             pass
 
     def action_add_url(self) -> None:
+        if self.command_mode:
+            return
         self._show_status_message("Enter URL: (e.g., https://example.com/songs.js)")
         self._start_command_mode("url ")
 
@@ -692,7 +749,7 @@ class MusicTUI(App):
             command_input = self.query_one("#command-input", CommandInput)
             command_input.set_command(initial_text)
             command_input.styles.display = "block"
-            self.call_later(lambda: command_input.focus())
+            self.set_timer(0, lambda: command_input.focus())
         except Exception:
             pass
 
@@ -700,6 +757,8 @@ class MusicTUI(App):
         self._start_command_mode()
 
     def action_remove_favorite(self) -> None:
+        if self.command_mode:
+            return
         try:
             track_table = self.query_one("#track-table", TrackTable)
             track = track_table.get_selected_track()
@@ -714,6 +773,8 @@ class MusicTUI(App):
             pass
 
     def action_add_to_blacklist(self) -> None:
+        if self.command_mode:
+            return
         try:
             track_table = self.query_one("#track-table", TrackTable)
             track = track_table.get_selected_track()
@@ -735,6 +796,8 @@ class MusicTUI(App):
             pass
 
     def action_page_up(self) -> None:
+        if self.command_mode:
+            return
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
@@ -753,6 +816,8 @@ class MusicTUI(App):
             pass
 
     def action_page_down(self) -> None:
+        if self.command_mode:
+            return
         try:
             if self.current_view == "settings":
                 settings = self.query_one("#settings", Settings)
@@ -771,6 +836,8 @@ class MusicTUI(App):
             pass
 
     def action_show_favorites(self) -> None:
+        if self.command_mode:
+            return
         self.current_view = "favorites"
         try:
             self._hide_other_views("#track-table")
