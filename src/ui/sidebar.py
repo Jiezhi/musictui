@@ -2,6 +2,13 @@ from textual.widgets import Static
 
 
 class Sidebar(Static):
+    def set_selected(self, index: int) -> None:
+        """Directly set the selected index (used by view‑switch actions).
+        The index is clamped to the valid range and the UI is refreshed.
+        """
+        self.selected = max(0, min(index, len(self.items) - 1))
+        self._update_content()
+
     def __init__(self, **kwargs):
         items = ["Library", "Queue", "Search", "Favorites", "Settings"]
         super().__init__("\n".join(items), **kwargs)

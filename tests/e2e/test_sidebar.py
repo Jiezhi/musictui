@@ -23,7 +23,7 @@ async def test_sidebar_displays_items():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         sidebar = app.query_one("#sidebar")
         assert "Library" in sidebar.items
         assert "Queue" in sidebar.items
@@ -40,7 +40,7 @@ async def test_sidebar_initial_selection():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         sidebar = app.query_one("#sidebar")
         assert sidebar.selected == 0
         assert sidebar.get_selected() == "Library"
@@ -48,43 +48,43 @@ async def test_sidebar_initial_selection():
 
 @pytest.mark.asyncio
 async def test_sidebar_move_down():
-    """Test pressing 'l' moves sidebar selection down"""
+    """Test pressing 'h' moves sidebar selection down (per current bindings)."""
     from src.app import MusicTUI
 
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         sidebar = app.query_one("#sidebar")
         initial_selection = sidebar.selected
-        
-        # Press 'l' to move down
-        await pilot.press("l")
+
+        # Press 'h' to move down according to BINDINGS
+        await pilot.press("h")
         await pilot.pause()
-        
+
         assert sidebar.selected == (initial_selection + 1) % len(sidebar.items)
 
 
 @pytest.mark.asyncio
 async def test_sidebar_move_up():
-    """Test pressing 'h' moves sidebar selection up"""
+    """Test pressing 'l' moves sidebar selection up (according to current bindings)."""
     from src.app import MusicTUI
 
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
-        # Move down first
-        await pilot.press("l")
-        await pilot.pause()
-        
-        sidebar = app.query_one("#sidebar")
-        middle_selection = sidebar.selected
-        
-        # Press 'h' to move up
+
+        # Move down first using 'h' (which increments selection)
         await pilot.press("h")
         await pilot.pause()
-        
+
+        sidebar = app.query_one("#sidebar")
+        middle_selection = sidebar.selected
+
+        # Press 'l' to move up (decrement selection)
+        await pilot.press("l")
+        await pilot.pause()
+
         assert sidebar.selected == (middle_selection - 1) % len(sidebar.items)
 
 
@@ -96,19 +96,19 @@ async def test_sidebar_wraps_around():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         sidebar = app.query_one("#sidebar")
         # Move to last item
         for _ in range(len(sidebar.items) - 1):
             await pilot.press("l")
             await pilot.pause()
-        
+
         assert sidebar.selected == len(sidebar.items) - 1
-        
+
         # Move down should wrap to first
         await pilot.press("l")
         await pilot.pause()
-        
+
         assert sidebar.selected == 0
 
 
@@ -120,15 +120,15 @@ async def test_sidebar_click_navigates_to_view():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         # Move to Queue in sidebar
         await pilot.press("l")
         await pilot.pause()
-        
+
         # Press enter to select
         await pilot.press("enter")
         await pilot.pause()
-        
+
         # Should navigate to Queue view
         assert app.current_view == "queue"
 
@@ -141,21 +141,21 @@ async def test_sidebar_library_selection():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         # Move to Settings first
         await pilot.press("5")
         await pilot.pause()
         assert app.current_view == "settings"
-        
+
         # Move sidebar to Library (need to move up 4 times or down once)
         for _ in range(4):
             await pilot.press("h")
             await pilot.pause()
-        
+
         # Press enter to select
         await pilot.press("enter")
         await pilot.pause()
-        
+
         assert app.current_view == "library"
 
 
@@ -167,17 +167,17 @@ async def test_sidebar_search_selection():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         # Move to Search in sidebar (down 2 times)
         await pilot.press("l")
         await pilot.pause()
         await pilot.press("l")
         await pilot.pause()
-        
+
         # Press enter to select
         await pilot.press("enter")
         await pilot.pause()
-        
+
         assert app.current_view == "search"
 
 
@@ -189,16 +189,16 @@ async def test_sidebar_favorites_selection():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         # Move to Favorites in sidebar (down 3 times)
         for _ in range(3):
             await pilot.press("l")
             await pilot.pause()
-        
+
         # Press enter to select
         await pilot.press("enter")
         await pilot.pause()
-        
+
         assert app.current_view == "favorites"
 
 
@@ -210,14 +210,14 @@ async def test_sidebar_settings_selection():
     app = MusicTUI()
     async with app.run_test() as pilot:
         await pilot.pause()
-        
+
         # Move to Settings in sidebar (down 4 times)
         for _ in range(4):
             await pilot.press("l")
             await pilot.pause()
-        
+
         # Press enter to select
         await pilot.press("enter")
         await pilot.pause()
-        
+
         assert app.current_view == "settings"

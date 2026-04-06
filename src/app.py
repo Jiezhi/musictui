@@ -195,14 +195,20 @@ class MusicTUI(App):
             yield PlayerBar(id="player-bar")
             yield StatusBar(id="status-bar")
 
-    def __init__(self, **kwargs):
+    def __init__(self, db_path: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self.current_view = "library"
+        self._db_path = db_path
 
     def on_mount(self) -> None:
         self.config = get_config()
         self.player = Player()
-        self.library = Library(os.path.expanduser("~/.musictui/music.db"))
+        db_path = (
+            self._db_path
+            if self._db_path
+            else os.path.expanduser("~/.musictui/music.db")
+        )
+        self.library = Library(db_path)
 
         self._init_views()
         self._init_player()
