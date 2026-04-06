@@ -5,6 +5,17 @@ from src.models import Track
 
 
 class TrackTable(DataTable):
+    # Helper to move cursor; Textual DataTable may not expose cursor_move directly
+    def cursor_move(self, row: int, column: int = 0) -> None:
+        """Set cursor position programmatically.
+
+        Args:
+            row: Row index to select.
+            column: Column index (default 0).
+        """
+        # DataTable uses `cursor_coordinate` property for position
+        self.cursor_coordinate = (row, column)
+
     """曲目列表组件，基于 DataTable"""
 
     class TrackSelected(Message):
@@ -50,7 +61,7 @@ class TrackTable(DataTable):
                 key=str(track.id),
             )
         if tracks:
-            self.set_timer(0, lambda: self.cursor_move(row=0, column=0))
+            self.set_timer(0.001, lambda: self.cursor_move(row=0, column=0))
 
     def _format_duration(self, seconds: float) -> str:
         minutes = int(seconds // 60)
@@ -83,6 +94,11 @@ class TrackTable(DataTable):
         self.post_message(self.TrackSelected(track, self.cursor_row))
 
     def on_data_table_row_activated(self, event: Any) -> None:
-        """行双击事件"""
+        """行双击事件 (fallback)"""
+        track = self.get_selected_track()
+        self.post_message(self.TrackDoubleClicked(track, self.cursor_row))
+
+    def on_data_table_row_double_clicked(self, event: Any) -> None:
+        """行双击事件（显式）"""
         track = self.get_selected_track()
         self.post_message(self.TrackDoubleClicked(track, self.cursor_row))

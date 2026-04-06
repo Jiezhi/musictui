@@ -31,10 +31,12 @@ class TrackList(Static):
 
         self._last_rendered_content = new_content
         self.update(new_content)
+        self.refresh()
+        self.refresh()
         # Use call_later so tests can mock the timer. Fallback to set_timer if call_later is unavailable.
         try:
             # type: ignore[attr-defined]
-            self.call_later(0, self.scroll_to_selection)
+            self.call_later(self.scroll_to_selection, 0)
         except Exception:
             try:
                 self.set_timer(0, self.scroll_to_selection)
@@ -83,10 +85,12 @@ class TrackList(Static):
 
         self._last_rendered_content = new_content
         self.update(new_content)
+        self.refresh()
+        self.refresh()
         # Use call_later so tests can mock the timer. Fallback to set_timer if call_later is unavailable.
         try:
             # type: ignore[attr-defined]
-            self.call_later(0, self.scroll_to_selection)
+            self.call_later(self.scroll_to_selection, 0)
         except Exception:
             try:
                 self.set_timer(0, self.scroll_to_selection)
@@ -107,7 +111,7 @@ class TrackList(Static):
         # Use call_later so tests can mock the timer. Fallback to set_timer if call_later is unavailable.
         try:
             # type: ignore[attr-defined]
-            self.call_later(0, self.scroll_to_selection)
+            self.call_later(self.scroll_to_selection, 0)
         except Exception:
             try:
                 self.set_timer(0, self.scroll_to_selection)
