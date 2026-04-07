@@ -1,5 +1,6 @@
 import os
 import pytest
+import sqlite3
 from unittest.mock import MagicMock, patch
 from src.app import MusicTUI
 from src.library import Library
@@ -34,7 +35,9 @@ def empty_db(tmp_path):
     """Create a temporary SQLite DB pre‑populated with a couple of tracks."""
     db_path = tmp_path / "test.db"
     lib = Library(str(db_path))
-    lib._execute(
+    # Use direct connection to insert test data
+    conn = sqlite3.connect(db_path)
+    conn.execute(
         """
         INSERT INTO tracks (file_path, title, artist, duration)
         VALUES
@@ -42,6 +45,8 @@ def empty_db(tmp_path):
             ('/music/track2.mp3', 'Second', 'ArtistB', 210);
         """
     )
+    conn.commit()
+    conn.close()
     return lib
 
 
